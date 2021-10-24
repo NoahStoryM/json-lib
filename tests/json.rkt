@@ -2,7 +2,7 @@
 
 ;; Mathias, added test for contracts on read-json
 
-(require json racket/string tests/eli-tester
+(require "../main.rkt" racket/string tests/eli-tester
          racket/port racket/contract)
 
 (define T string-append)
