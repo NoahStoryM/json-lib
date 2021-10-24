@@ -204,8 +204,7 @@
       ;; so there should never be a \U in the output of this function); but I
       ;; don't know if there's a known specification to what gets a \U
       [(control) #rx"[\0-\37\\\"\177]"]
-      [(all)     #rx"[\0-\37\\\"\177-\U10FFFF]"]
-      [else (raise-type-error who "encode?" enc)]))
+      [(all)     #rx"[\0-\37\\\"\177-\U10FFFF]"]))
 
   (: write-JSON-string [-> String Index])
   (define (write-JSON-string str)
