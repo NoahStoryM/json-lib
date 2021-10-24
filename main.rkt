@@ -359,22 +359,24 @@
              (define buf (make-bytes 6 c))
 
              (let utf8-loop : String ([start : Natural 0] [end : Natural 1])
-                  (define-values (wrote-n read-n state) (bytes-convert cvtr buf start end buf 0 6))
-                  (case state
-                    [(complete)
-                     (keep-char (bytes-utf-8-ref buf 0) result pos cvtr)]
-                    [(error)
-                     (err "UTF-8 decoding error at ~e" (subbytes buf 0 end))]
-                    [(continues)
-                     (err "no enough space at ~e" buf)]
-                    [(aborts)
-                     (define c (read-byte i))
-                     (cond
-                       [(eof-object? c)
-                        (err "unexpected end-of-file")]
-                       [else
-                        (bytes-set! buf end c)
-                        (utf8-loop (+ start read-n) (add1 end))])]))]))
+               (define-values (wrote-n read-n state)
+                 (bytes-convert cvtr buf start end buf 0 6))
+
+               (case state
+                 [(complete)
+                  (keep-char (bytes-utf-8-ref buf 0) result pos cvtr)]
+                 [(error)
+                  (err "UTF-8 decoding error at ~e" (subbytes buf 0 end))]
+                 [(continues)
+                  (err "no enough space at ~e" buf)]
+                 [(aborts)
+                  (define c (read-byte i))
+                  (cond
+                    [(eof-object? c)
+                     (err "unexpected end-of-file")]
+                    [else
+                     (bytes-set! buf end c)
+                     (utf8-loop (+ start read-n) (add1 end))])]))]))
 
         (: read-escape [-> Char String Natural (Option Bytes-Converter) String])
         (define (read-escape esc result pos converter)
@@ -455,14 +457,14 @@
           [(eqv? end ch) (read-byte i) '()]
           [else
            (let loop : (Listof A) ([l : (Listof A) (list (read-one))])
-                (define ch (skip-whitespace))
+             (define ch (skip-whitespace))
 
-                (cond
-                  [(eqv? ch end) (read-byte i) (reverse l)]
-                  [(eqv? ch #\,) (read-byte i) (loop (cons (read-one) l))]
-                  [else
-                   (read-byte i) ;; consume the eof
-                   (err "error while parsing a json ~a" what)]))]))
+             (cond
+               [(eqv? ch end) (read-byte i) (reverse l)]
+               [(eqv? ch #\,) (read-byte i) (loop (cons (read-one) l))]
+               [else
+                (read-byte i) ;; consume the eof
+                (err "error while parsing a json ~a" what)]))]))
 
       ;;
       (: read-hash [-> (Immutable-HashTable Symbol JSON)])
@@ -481,8 +483,8 @@
           (cons (string->symbol k) (read-JSON)))
 
         (for/hasheq : (Immutable-HashTable Symbol JSON)
-                    ([p (in-list (read-list 'object #\} read-pair))])
-                    (values (car p) (cdr p))))
+             ([p (in-list (read-list 'object #\} read-pair))])
+          (values (car p) (cdr p))))
 
       ;;
       (: read-literal [-> Bytes Void])
