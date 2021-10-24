@@ -64,7 +64,7 @@
 (define-type JS-Number (U Integer Inexact-Rational JS-Inf))
 (define-predicate json-number? JS-Number)
 
-(struct js-null ([val : (Parameter Any)]) #:type-name JS-Null)
+(struct js-null ([val : (Parameter Any)]) #:transparent #:type-name JS-Null)
 (define json-null? (procedure-rename js-null? 'json-null?))
 
 (define-type JS-List (Listof JSON))
