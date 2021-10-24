@@ -38,6 +38,14 @@
         (not (jsexpr? '#hasheq([1 . 1])))
         (not (jsexpr? '#hasheq(["x" . 1])))
         (not (jsexpr? '#hasheq(['() . 1])))
+        (jsexpr? (hash-copy '#hasheq()))
+        (jsexpr? (hash-copy '#hasheq([x . 1])))
+        (jsexpr? (hash-copy '#hasheq([x . 1] [y . 2])))
+        (jsexpr? (hash-copy '#hash([x . 1] [y . 2]))) ; fine as a jsexpr too
+        (jsexpr? (hash-copy '#hasheq([|x\y| . 1] [y . 2])))
+        (not (jsexpr? (hash-copy '#hasheq([1 . 1]))))
+        (not (jsexpr? (hash-copy '#hasheq(["x" . 1]))))
+        (not (jsexpr? (hash-copy '#hasheq(['() . 1]))))
         (not (jsexpr? (/ 1.0 0.0)))
         (not (jsexpr? (/ -1.0 0.0)))
         (not (jsexpr? (/ 0.0 0.0)))
@@ -89,6 +97,7 @@
         (jsexpr->string (string->jsexpr "{\"\U0010FFFF\":\"\U0010FFFF\"}"))
         => "{\"\U0010FFFF\":\"\U0010FFFF\"}"
         (jsexpr->string #hash[(a . 1) (b . 2)]) => "{\"a\":1,\"b\":2}"
+        (jsexpr->string (hash-copy #hash[(a . 1) (b . 2)])) => "{\"a\":1,\"b\":2}"
         (jsexpr->string (string->jsexpr "{\"\U0010FFFF\":\"\U0010FFFF\"}")
                         #:encode 'all)
         => "{\"\\udbff\\udfff\":\"\\udbff\\udfff\"}"
@@ -134,6 +143,13 @@
         (string->jsexpr @T{ [1,[2],3] }) => '(1 (2) 3)
         (string->jsexpr @T{ [ 1 , [ 2 ] , 3 ] }) => '(1 (2) 3)
         (string->jsexpr @T{ [true, false, null] }) => '(#t #f null)
+        (immutable? (string->jsexpr @T{ {} }))
+        (immutable? (string->jsexpr @T{ {"x":1} }))
+        (immutable? (string->jsexpr @T{ {"x":1,"y":2} }))
+        (parameterize ([jsexpr-mutable? #t])
+          (not (immutable? (string->jsexpr @T{ {} })))
+          (not (immutable? (string->jsexpr @T{ {"x":1} })))
+          (not (immutable? (string->jsexpr @T{ {"x":1,"y":2} }))))
         (string->jsexpr @T{ {} }) => '#hasheq()
         (string->jsexpr @T{ {"x":1} }) => '#hasheq([x . 1])
         (string->jsexpr @T{ {"x":1,"y":2} }) => '#hasheq([x . 1] [y . 2])
