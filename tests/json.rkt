@@ -2,7 +2,7 @@
 
 ;; Mathias, added test for contracts on read-json
 
-(require json racket/string tests/eli-tester
+(require "../main.rkt" racket/string tests/eli-tester
          racket/port racket/contract)
 
 (define T string-append)
@@ -41,11 +41,11 @@
         (not (jsexpr? (/ 1.0 0.0)))
         (not (jsexpr? (/ -1.0 0.0)))
         (not (jsexpr? (/ 0.0 0.0)))
-        (not (jsexpr? +inf.0))
-        (not (jsexpr? -inf.0))
+        (jsexpr? +inf.0)
+        (jsexpr? -inf.0)
         (not (jsexpr? +nan.0))
-        (not (jsexpr? +inf.f))
-        (not (jsexpr? -inf.f))
+        (jsexpr? +inf.f)
+        (jsexpr? -inf.f)
         (not (jsexpr? +nan.f))
         )
   ;; other `null' values
