@@ -35,9 +35,9 @@
  ;; Type and Predicate
  JSON json? JSExpr jsexpr?
 
- JS-Inf     js-inf?
- JS-Pos-Inf js-inf+? js-inf+-val JSON-inf+
- JS-Neg-Inf js-inf-? js-inf--val JSON-inf-
+ JS-Inf     js-inf?  js-inf-val
+ JS-Pos-Inf js-inf+? JSON-inf+
+ JS-Neg-Inf js-inf-? JSON-inf-
 
  JS-Null    js-null? js-null-val JSON-null
 
@@ -65,9 +65,9 @@
 (define-type JS-Number (U Integer Inexact-Real JS-Inf))
 (define-predicate json-number? JS-Number)
 
-(struct js-inf () #:transparent #:type-name JS-Inf)
-(struct js-inf+ JS-Inf ([val : (Parameter JSExpr)]) #:transparent #:type-name JS-Pos-Inf)
-(struct js-inf- JS-Inf ([val : (Parameter JSExpr)]) #:transparent #:type-name JS-Neg-Inf)
+(struct js-inf ([val : (Parameter JSExpr)]) #:transparent #:type-name JS-Inf)
+(struct js-inf+ JS-Inf () #:transparent #:type-name JS-Pos-Inf)
+(struct js-inf- JS-Inf () #:transparent #:type-name JS-Neg-Inf)
 
 (struct js-null ([val : (Parameter JSExpr)]) #:transparent #:type-name JS-Null)
 
@@ -96,15 +96,11 @@
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-])
     (let loop ([x x])
-      (or (eq? x (json-inf+))
-          (eq? x (json-inf-))
-          (js-inf+? x)
-          (js-inf-? x)
-          (exact-integer? x)
-          (inexact-rational? x)
+      (or (or (eq? x (json-inf+)) (js-inf+? x))
+          (or (eq? x (json-inf-)) (js-inf-? x))
+          (or (eq? x (json-null)) (js-null? x))
+          (or (exact-integer? x) (inexact-rational? x))
           (boolean? x)
-          (eq? x (json-null))
-          (js-null? x)
           (string? x)
           (and (list? x) (andmap loop x))
           (and (hash? x) (for/and ([(k v) (in-hash x)])
@@ -224,10 +220,20 @@
 
   (let loop : Any ([x x])
     (cond
-      [(or (exact-integer? x) (inexact-rational? x)) (write x o)]
+      [(and (js-inf+? x)
+            ;; eliminate endless loops
+            (not (eq? (json-inf+) json-inf+))
+            (not (eq? (json-inf+) JSON-inf+)))
+       (write-JSON (jsexpr->json (json-inf+)) o #:encode enc)]
+      [(and (js-inf-? x)
+            ;; eliminate endless loops
+            (not (eq? (json-inf-) json-inf-))
+            (not (eq? (json-inf-) JSON-inf-)))
+       (write-JSON (jsexpr->json (json-inf-)) o #:encode enc)]
+      [(js-null? x) (write-bytes #"null"  o)]
       [(eq? x #f)   (write-bytes #"false" o)]
-      [(eq? x #t)   (write-bytes #"true" o)]
-      [(js-null? x) (write-bytes #"null" o)]
+      [(eq? x #t)   (write-bytes #"true"  o)]
+      [(or (exact-integer? x) (inexact-rational? x)) (write x o)]
       [(string? x) (write-JSON-string x)]
       [(json-list? x)
        (write-bytes #"[" o)
@@ -715,12 +721,18 @@
 ;; -----------------------------------------------------------------------------
 ;; CONVENIENCE FUNCTIONS
 
-(: to-json-number [-> (U JS-Number Inexact-Real) JS-Number])
-(define to-json-number
-  (λ (n)
+(: to-json-number [-> (U JS-Number Inexact-Real)
+                      [#:inf+ JSExpr]
+                      [#:inf- JSExpr]
+                      JS-Number])
+(define (to-json-number n
+                        #:inf+ [jsinf+ (json-inf+)]
+                        #:inf- [jsinf- (json-inf-)])
+  (parameterize ([json-inf+ jsinf+]
+                 [json-inf- jsinf-])
     (cond
-      [(eq? n +inf.0) JSON-inf+]
-      [(eq? n -inf.0) JSON-inf-]
+      [(or (eq? n +inf.0) (eq? n (json-inf+))) JSON-inf+]
+      [(or (eq? n -inf.0) (eq? n (json-inf-))) JSON-inf-]
       [(json-number? n) n]
       [(inexact-real-nan? n) (raise-type-error 'to-json-number "json-number?" n)]
       [else n])))
@@ -743,13 +755,12 @@
                  [jsexpr-mutable? mutable?])
     (cond
       [(json-number? js)
-       (cond [(exact-integer? js) js]
-             [(js-inf+? js) (json-inf+)]
-             [(js-inf-? js) (json-inf-)]
-             [(inexact-rational? js) js]
-             [else js])]
-      [(boolean? js) js]
+       (cond [(or (exact-integer? js) (inexact-rational? js)) js]
+             [(or (eq? js (json-inf+)) (js-inf+? js)) (json-inf+)]
+             [(or (eq? js (json-inf-)) (js-inf-? js)) (json-inf-)]
+             [else (raise-type-error 'json->jsexpr "json?" js)])]
       [(js-null? js) (json-null)]
+      [(boolean? js) js]
       [(string? js) js]
       [(json-list? js) (map json->jsexpr js)]
       [(json-object? js)
@@ -777,12 +788,11 @@
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-])
     (cond
-      [(eq? x (json-inf+)) JSON-inf+]
-      [(eq? x (json-inf-)) JSON-inf-]
-      [(json-number? x) x]
+      [(or (eq? x (json-inf+)) (js-inf+? x)) JSON-inf+]
+      [(or (eq? x (json-inf-)) (js-inf-? x)) JSON-inf-]
+      [(or (eq? x (json-null)) (js-null? x)) JSON-null]
       [(boolean? x) x]
-      [(eq? x (json-null))    JSON-null]
-      [(js-null? x) x]
+      [(and (json-number? x) (or (exact-integer? x) (inexact-rational? x))) x]
       [(string? x) x]
       [(list? x) (map jsexpr->json x)]
       [(hash? x)
