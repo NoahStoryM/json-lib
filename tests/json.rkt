@@ -1,6 +1,6 @@
 #lang at-exp racket/base
 
-;; Mathias, added test for contracts on read-json
+;; Mathias, added test for contracts on read-jsexpr
 
 (require "../main.rkt" racket/string tests/eli-tester
          racket/port racket/contract)
@@ -161,10 +161,10 @@
         (string->jsexpr @T{ "\uD834\uDD1E" }) => "\U1D11E"
         (string->jsexpr @T{ "\ud834\udd1e" }) => "\U1d11e"
         ;; INPUT PORT is optional
-        (with-input-from-string "[]" read-json)
+        (with-input-from-string "[]" read-jsexpr)
         => (parameterize ((json-null '())) (json-null))
         ;; EOF detection
-        (for/list ([je (in-port read-json
+        (for/list ([je (in-port read-jsexpr
                                 (open-input-string
                                  @T{ 1 [2,3] "four" }))])
           je)
@@ -233,112 +233,112 @@
         ;;  - eof is the entire thing in the stream (and thus it is returned), or
         ;;  - the eof triggered an error (ie the json object isn't complete)
         (let ([p (port-with-particulars (list #"1" eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         => (list 1 (list eof 97))
 
         (let ([p (port-with-particulars (list eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         =>
         (list eof (list 97))
 
         (let ([p (port-with-particulars (list eof eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         =>
         (list eof (list eof 97))
 
         (let ([p (port-with-particulars (list eof eof #"a"))])
-          (list (read-json p)
-                (read-json p)
+          (list (read-jsexpr p)
+                (read-jsexpr p)
                 (flush-data p)))
         =>
         (list eof eof (list 97))
 
         (let ([p (port-with-particulars (list #"\"1\"" eof eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         => (list "1" (list eof eof 97))
 
         (let ([p (port-with-particulars (list #"\"1" eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"[1, 2]" eof eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         => (list (list 1 2) (list eof eof 97))
 
         (let ([p (port-with-particulars (list #"[1, 2" eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"[1," eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"{ \"x\":  11 }" eof eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         => (list (hasheq 'x 11) (list eof eof 97))
 
         (let ([p (port-with-particulars (list #"{ \"x\":  11 " eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"{ \"x\" " eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"{ \"x\" : " eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"{  " eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"{" eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"true" eof eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         => (list #t (list eof eof 97))
 
         (let ([p (port-with-particulars (list #"false" eof eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         => (list #f (list eof eof 97))
 
         (let ([p (port-with-particulars (list #"null" eof eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         => (list 'null (list eof eof 97))
 
-        ;; tests to make sure read-json doesn't hang when the
+        ;; tests to make sure read-jsexpr doesn't hang when the
         ;; input is already enough to be sure we're doomed
-        (read-json (port-with-particulars #"started"))
-        =error> #rx"read-json: bad input starting #\"started\""
+        (read-jsexpr (port-with-particulars #"started"))
+        =error> #rx"read-jsexpr: bad input starting #\"started\""
 
-        (read-json (port-with-particulars #"try"))
-        =error> #rx"read-json: bad input starting #\"try\""
+        (read-jsexpr (port-with-particulars #"try"))
+        =error> #rx"read-jsexpr: bad input starting #\"try\""
 
-        (read-json (port-with-particulars #"falz"))
-        =error> #rx"read-json: bad input starting #\"falz\""
+        (read-jsexpr (port-with-particulars #"falz"))
+        =error> #rx"read-jsexpr: bad input starting #\"falz\""
 
-        (read-json (port-with-particulars #"noll"))
-        =error> #rx"read-json: bad input starting #\"noll\""
+        (read-jsexpr (port-with-particulars #"noll"))
+        =error> #rx"read-jsexpr: bad input starting #\"noll\""
 
         ))
 
@@ -541,12 +541,12 @@
         =>
         #"abc\0\0"))
 
-(define (read-json/swallow-error p)
+(define (read-jsexpr/swallow-error p)
   (with-handlers ([(λ (x) (and (exn:fail:read? x)
-                                (regexp-match #rx"^[^\n]*read-json:" (exn-message x))))
+                                (regexp-match #rx"^[^\n]*read-jsexpr:" (exn-message x))))
                    (λ (x) 'exn)])
-    (read-json p)
-    (error 'read-json/swallow-error "did not raise an error")))
+    (read-jsexpr p)
+    (error 'read-jsexpr/swallow-error "did not raise an error")))
 
 (test do (port-with-particulars-tests)
       do (pred-tests)

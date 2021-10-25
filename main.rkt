@@ -30,15 +30,18 @@
 
 (provide
  ;; Parameter
- json-null json-pos-inf json-neg-inf jsexpr-mutable? ;; Parameter
+ json-null json-pos-inf json-neg-inf jsexpr-mutable?
 
+ ;; Type and Predicate
  JSON json? JSExpr jsexpr?
 
+ ;; IO
  write-JSON read-JSON
 
  write-jsexpr (rename-out [write-jsexpr write-json])
  read-jsexpr  (rename-out [read-jsexpr  read-json])
 
+ ;; Convenience Functions
  json->jsexpr jsexpr->json
 
  json->string string->json
@@ -156,7 +159,7 @@
   (parameterize ([json-null    jsnull]
                  [json-pos-inf jsinf+]
                  [json-neg-inf jsinf-])
-    (write-JSON* 'write-json (jsexpr->json x) o enc)))
+    (write-JSON* 'write-jsexpr (jsexpr->json x) o enc)))
 
 (: write-JSON [->* (JSON) (Output-Port #:encode Encode) Void])
 (define (write-JSON x [o (current-output-port)] #:encode [enc 'control])
@@ -269,7 +272,7 @@
                  [json-pos-inf    jsinf+]
                  [json-neg-inf    jsinf-]
                  [jsexpr-mutable? mutable?])
-    (define js (read-JSON* 'read-json i))
+    (define js (read-JSON* 'read-jsexpr i))
     (if (eof-object? js)
         eof
         (json->jsexpr js))))
