@@ -223,12 +223,12 @@
       [(and (js-inf+? x)
             ;; eliminate endless loops
             (not (eq? (json-inf+) json-inf+))
-            (not (eq? (json-inf+) JSON-inf+)))
+            (not (js-inf+? (json-inf+))))
        (write-JSON (jsexpr->json (json-inf+)) o #:encode enc)]
       [(and (js-inf-? x)
             ;; eliminate endless loops
             (not (eq? (json-inf-) json-inf-))
-            (not (eq? (json-inf-) JSON-inf-)))
+            (not (js-inf-? (json-inf-))))
        (write-JSON (jsexpr->json (json-inf-)) o #:encode enc)]
       [(js-null? x) (write-bytes #"null"  o)]
       [(eq? x #f)   (write-bytes #"false" o)]
