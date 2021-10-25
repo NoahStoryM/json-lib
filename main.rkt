@@ -30,7 +30,7 @@
 
 (provide
  ;; Parameter
- json-null json-pos-inf json-neg-inf jsexpr-mutable?
+ json-null json-inf+ json-inf- jsexpr-mutable?
 
  ;; Type and Predicate
  JSON json? JSExpr jsexpr?
@@ -60,8 +60,8 @@
 (define-predicate json-number? JS-Number)
 
 (struct js-inf () #:transparent #:type-name JS-Inf)
-(struct js-pos-inf JS-Inf ([val : (Parameter JSExpr)]) #:transparent #:type-name JS-Pos-Inf)
-(struct js-neg-inf JS-Inf ([val : (Parameter JSExpr)]) #:transparent #:type-name JS-Neg-Inf)
+(struct js-inf+ JS-Inf ([val : (Parameter JSExpr)]) #:transparent #:type-name JS-Pos-Inf)
+(struct js-inf- JS-Inf ([val : (Parameter JSExpr)]) #:transparent #:type-name JS-Neg-Inf)
 
 (struct js-null ([val : (Parameter JSExpr)]) #:transparent #:type-name JS-Null)
 
@@ -78,22 +78,22 @@
 
 (define-type JSExpr Any)
 (: jsexpr? [-> Any
-               [#:null    JSExpr]
-               [#:pos-inf JSExpr]
-               [#:neg-inf JSExpr]
+               [#:null JSExpr]
+               [#:inf+ JSExpr]
+               [#:inf- JSExpr]
                Boolean])
 (define (jsexpr? x
-                 #:null    [jsnull (json-null)]
-                 #:pos-inf [jsinf+ (json-pos-inf)]
-                 #:neg-inf [jsinf- (json-neg-inf)])
-  (parameterize ([json-null    jsnull]
-                 [json-pos-inf jsinf+]
-                 [json-neg-inf jsinf-])
+                 #:null [jsnull (json-null)]
+                 #:inf+ [jsinf+ (json-inf+)]
+                 #:inf- [jsinf- (json-inf-)])
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-])
     (let loop ([x x])
-      (or (eq? x (json-pos-inf))
-          (eq? x (json-neg-inf))
-          (js-pos-inf? x)
-          (js-neg-inf? x)
+      (or (eq? x (json-inf+))
+          (eq? x (json-inf-))
+          (js-inf+? x)
+          (js-inf-? x)
           (exact-integer? x)
           (inexact-rational? x)
           (boolean? x)
@@ -122,19 +122,19 @@
 
 
 ;; The default translation for a Racket `+inf' value
-(: json-pos-inf (Parameter JSExpr))
-(define json-pos-inf (make-parameter +inf.0))
+(: json-inf+ (Parameter JSExpr))
+(define json-inf+ (make-parameter +inf.0))
 
-(: JSON-pos-inf JS-Pos-Inf)
-(define JSON-pos-inf (js-pos-inf json-pos-inf))
+(: JSON-inf+ JS-Pos-Inf)
+(define JSON-inf+ (js-inf+ json-inf+))
 
 
 ;; The default translation for a Racket `-inf' value
-(: json-neg-inf (Parameter JSExpr))
-(define json-neg-inf (make-parameter -inf.0))
+(: json-inf- (Parameter JSExpr))
+(define json-inf- (make-parameter -inf.0))
 
-(: JSON-neg-inf JS-Neg-Inf)
-(define JSON-neg-inf (js-neg-inf json-neg-inf))
+(: JSON-inf- JS-Neg-Inf)
+(define JSON-inf- (js-inf- json-inf-))
 
 
 (: jsexpr-mutable? (Parameter Boolean))
@@ -145,20 +145,20 @@
 
 (: write-jsexpr [->* (JSON)
                      (Output-Port
-                      #:null    JSExpr
-                      #:pos-inf JSExpr
-                      #:neg-inf JSExpr
+                      #:null JSExpr
+                      #:inf+ JSExpr
+                      #:inf- JSExpr
                       #:encode Encode)
                      Void])
 (define (write-jsexpr x
                       [o (current-output-port)]
-                      #:null    [jsnull (json-null)]
-                      #:pos-inf [jsinf+ (json-pos-inf)]
-                      #:neg-inf [jsinf- (json-neg-inf)]
+                      #:null [jsnull (json-null)]
+                      #:inf+ [jsinf+ (json-inf+)]
+                      #:inf- [jsinf- (json-inf-)]
                       #:encode [enc 'control])
-  (parameterize ([json-null    jsnull]
-                 [json-pos-inf jsinf+]
-                 [json-neg-inf jsinf-])
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-])
     (write-JSON* 'write-jsexpr (jsexpr->json x) o enc)))
 
 (: write-JSON [->* (JSON) (Output-Port #:encode Encode) Void])
@@ -258,19 +258,19 @@
 
 (: read-jsexpr [->* ()
                     (Input-Port
-                     #:null    JSExpr
-                     #:pos-inf JSExpr
-                     #:neg-inf JSExpr
+                     #:null JSExpr
+                     #:inf+ JSExpr
+                     #:inf- JSExpr
                      #:mutable? Boolean)
                     JSExpr])
 (define (read-jsexpr [i (current-input-port)]
-                     #:null     [jsnull (json-null)]
-                     #:pos-inf  [jsinf+ (json-pos-inf)]
-                     #:neg-inf  [jsinf- (json-neg-inf)]
+                     #:null [jsnull (json-null)]
+                     #:inf+ [jsinf+ (json-inf+)]
+                     #:inf- [jsinf- (json-inf-)]
                      #:mutable? [mutable? (jsexpr-mutable?)])
-  (parameterize ([json-null       jsnull]
-                 [json-pos-inf    jsinf+]
-                 [json-neg-inf    jsinf-]
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-]
                  [jsexpr-mutable? mutable?])
     (define js (read-JSON* 'read-jsexpr i))
     (if (eof-object? js)
@@ -713,33 +713,33 @@
 (define to-json-number
   (λ (n)
     (cond
-      [(eq? n +inf.0) JSON-pos-inf]
-      [(eq? n -inf.0) JSON-neg-inf]
+      [(eq? n +inf.0) JSON-inf+]
+      [(eq? n -inf.0) JSON-inf-]
       [(json-number? n) n]
       [(inexact-real-nan? n) (raise-type-error 'to-json-number "json-number?" n)]
       [else n])))
 
 
 (: json->jsexpr [-> JSON
-                    [#:null    JSExpr]
-                    [#:pos-inf JSExpr]
-                    [#:neg-inf JSExpr]
+                    [#:null JSExpr]
+                    [#:inf+ JSExpr]
+                    [#:inf- JSExpr]
                     [#:mutable? Boolean]
                     JSExpr])
 (define (json->jsexpr js
-                      #:null     [jsnull (json-null)]
-                      #:pos-inf  [jsinf+ (json-pos-inf)]
-                      #:neg-inf  [jsinf- (json-neg-inf)]
+                      #:null [jsnull (json-null)]
+                      #:inf+ [jsinf+ (json-inf+)]
+                      #:inf- [jsinf- (json-inf-)]
                       #:mutable? [mutable? (jsexpr-mutable?)])
-  (parameterize ([json-null       jsnull]
-                 [json-pos-inf    jsinf+]
-                 [json-neg-inf    jsinf-]
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-]
                  [jsexpr-mutable? mutable?])
     (cond
       [(json-number? js)
        (cond [(exact-integer? js) js]
-             [(js-pos-inf? js) (json-pos-inf)]
-             [(js-neg-inf? js) (json-neg-inf)]
+             [(js-inf+? js) (json-inf+)]
+             [(js-inf-? js) (json-inf-)]
              [(inexact-rational? js) js]
              [else js])]
       [(boolean? js) js]
@@ -759,20 +759,20 @@
             (values k (json->jsexpr v)))])])))
 
 (: jsexpr->json [-> JSExpr
-                    [#:null    JSExpr]
-                    [#:pos-inf JSExpr]
-                    [#:neg-inf JSExpr]
+                    [#:null JSExpr]
+                    [#:inf+ JSExpr]
+                    [#:inf- JSExpr]
                     JSON])
 (define (jsexpr->json x
-                      #:null    [jsnull (json-null)]
-                      #:pos-inf [jsinf+ (json-pos-inf)]
-                      #:neg-inf [jsinf- (json-neg-inf)])
-  (parameterize ([json-null    jsnull]
-                 [json-pos-inf jsinf+]
-                 [json-neg-inf jsinf-])
+                      #:null [jsnull (json-null)]
+                      #:inf+ [jsinf+ (json-inf+)]
+                      #:inf- [jsinf- (json-inf-)])
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-])
     (cond
-      [(eq? x (json-pos-inf)) JSON-pos-inf]
-      [(eq? x (json-neg-inf)) JSON-neg-inf]
+      [(eq? x (json-inf+)) JSON-inf+]
+      [(eq? x (json-inf-)) JSON-inf-]
       [(json-number? x) x]
       [(boolean? x) x]
       [(eq? x (json-null))    JSON-null]
@@ -810,52 +810,52 @@
 
 
 (: jsexpr->string [-> JSExpr
-                      [#:null    JSExpr]
-                      [#:pos-inf JSExpr]
-                      [#:neg-inf JSExpr]
+                      [#:null JSExpr]
+                      [#:inf+ JSExpr]
+                      [#:inf- JSExpr]
                       [#:encode  Encode]
                       String])
 (define (jsexpr->string x
-                        #:null    [jsnull (json-null)]
-                        #:pos-inf [jsinf+ (json-pos-inf)]
-                        #:neg-inf [jsinf- (json-neg-inf)]
+                        #:null [jsnull (json-null)]
+                        #:inf+ [jsinf+ (json-inf+)]
+                        #:inf- [jsinf- (json-inf-)]
                         #:encode  [enc 'control])
-  (parameterize ([json-null    jsnull]
-                 [json-pos-inf jsinf+]
-                 [json-neg-inf jsinf-])
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-])
     (json->string (jsexpr->json x) #:encode enc)))
 
 (: jsexpr->bytes [-> JSExpr
-                     [#:null    JSExpr]
-                     [#:pos-inf JSExpr]
-                     [#:neg-inf JSExpr]
+                     [#:null JSExpr]
+                     [#:inf+ JSExpr]
+                     [#:inf- JSExpr]
                      [#:encode  Encode]
                      Bytes])
 (define (jsexpr->bytes x
-                       #:null    [jsnull (json-null)]
-                       #:pos-inf [jsinf+ (json-pos-inf)]
-                       #:neg-inf [jsinf- (json-neg-inf)]
+                       #:null [jsnull (json-null)]
+                       #:inf+ [jsinf+ (json-inf+)]
+                       #:inf- [jsinf- (json-inf-)]
                        #:encode  [enc 'control])
-  (parameterize ([json-null    jsnull]
-                 [json-pos-inf jsinf+]
-                 [json-neg-inf jsinf-])
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-])
     (json->bytes (jsexpr->json x) #:encode enc)))
 
 (: string->jsexpr [-> String
-                      [#:null     JSExpr]
-                      [#:pos-inf  JSExpr]
-                      [#:neg-inf  JSExpr]
+                      [#:null JSExpr]
+                      [#:inf+ JSExpr]
+                      [#:inf- JSExpr]
                       [#:mutable? Boolean]
                       (U EOF JSExpr)])
 (define (string->jsexpr str
-                        #:null     [jsnull (json-null)]
-                        #:pos-inf  [jsinf+ (json-pos-inf)]
-                        #:neg-inf  [jsinf- (json-neg-inf)]
+                        #:null [jsnull (json-null)]
+                        #:inf+ [jsinf+ (json-inf+)]
+                        #:inf- [jsinf- (json-inf-)]
                         #:mutable? [mutable? (jsexpr-mutable?)])
   (define i (open-input-string str))
-  (parameterize ([json-null       jsnull]
-                 [json-pos-inf    jsinf+]
-                 [json-neg-inf    jsinf-]
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-]
                  [jsexpr-mutable? mutable?])
     (define js (read-JSON* 'string->jsexpr i))
     (if (eof-object? js)
@@ -863,20 +863,20 @@
         (json->jsexpr js))))
 
 (: bytes->jsexpr [-> Bytes
-                     [#:null     JSExpr]
-                     [#:pos-inf  JSExpr]
-                     [#:neg-inf  JSExpr]
+                     [#:null JSExpr]
+                     [#:inf+ JSExpr]
+                     [#:inf- JSExpr]
                      [#:mutable? Boolean]
                      (U EOF JSExpr)])
 (define (bytes->jsexpr bs
-                       #:null     [jsnull (json-null)]
-                       #:pos-inf  [jsinf+ (json-pos-inf)]
-                       #:neg-inf  [jsinf- (json-neg-inf)]
+                       #:null [jsnull (json-null)]
+                       #:inf+ [jsinf+ (json-inf+)]
+                       #:inf- [jsinf- (json-inf-)]
                        #:mutable? [mutable? (jsexpr-mutable?)])
   (define i (open-input-bytes bs))
-  (parameterize ([json-null       jsnull]
-                 [json-pos-inf    jsinf+]
-                 [json-neg-inf    jsinf-]
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-]
                  [jsexpr-mutable? mutable?])
     (define js (read-JSON* 'bytes->jsexpr i))
     (if (eof-object? js)
