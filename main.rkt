@@ -35,6 +35,12 @@
  ;; Type and Predicate
  JSON json? JSExpr jsexpr?
 
+ JS-Inf     js-inf?
+ JS-Pos-Inf js-inf+? js-inf+-val JSON-inf+
+ JS-Neg-Inf js-inf-? js-inf--val JSON-inf-
+
+ JS-Null    js-null? js-null-val JSON-null
+
  ;; IO
  write-JSON read-JSON
 
