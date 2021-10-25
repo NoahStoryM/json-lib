@@ -56,11 +56,23 @@
         (jsexpr? -inf.f)
         (not (jsexpr? +nan.f))
         )
+
   ;; other `null' values
   (parameterize ([json-null #\null])
     (test (not (jsexpr? '(1 "2" (3) #t #f null)))
-          (jsexpr? '(1 "2" (3) #t #f #\null))
-          )))
+          (jsexpr? '(1 "2" (3) #t #f #\null))))
+
+  ;; other `inf' values
+  (parameterize ([json-inf+ '+inf]
+                 [json-inf- '-inf])
+    (test (not (jsexpr? +inf.0))
+          (not (jsexpr? -inf.0))
+          (not (jsexpr? +inf.f))
+          (not (jsexpr? -inf.f))
+          (jsexpr? '+inf)
+          (jsexpr? '-inf)
+          (jsexpr? '+inf)
+          (jsexpr? '-inf))))
 
 (define (print-tests)
   (for ([x (list 0 1 -1 12345 0.0 1.0 #t #f (λ(n) n) "" "abc" "abc\n\\"
@@ -146,10 +158,6 @@
         (immutable? (string->jsexpr @T{ {} }))
         (immutable? (string->jsexpr @T{ {"x":1} }))
         (immutable? (string->jsexpr @T{ {"x":1,"y":2} }))
-        (parameterize ([jsexpr-mutable? #t])
-          (not (immutable? (string->jsexpr @T{ {} })))
-          (not (immutable? (string->jsexpr @T{ {"x":1} })))
-          (not (immutable? (string->jsexpr @T{ {"x":1,"y":2} }))))
         (string->jsexpr @T{ {} }) => '#hasheq()
         (string->jsexpr @T{ {"x":1} }) => '#hasheq([x . 1])
         (string->jsexpr @T{ {"x":1,"y":2} }) => '#hasheq([x . 1] [y . 2])
@@ -340,7 +348,13 @@
         (read-jsexpr (port-with-particulars #"noll"))
         =error> #rx"read-jsexpr: bad input starting #\"noll\""
 
-        ))
+        )
+
+  ;; test `jsexpr-mutable?'
+  (parameterize ([jsexpr-mutable? #t])
+    (test (not (immutable? (string->jsexpr @T{ {} })))
+          (not (immutable? (string->jsexpr @T{ {"x":1} })))
+          (not (immutable? (string->jsexpr @T{ {"x":1,"y":2} }))))))
 
 (module port-with-particulars racket/base
   (require tests/eli-tester racket/contract)
