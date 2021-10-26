@@ -102,9 +102,9 @@
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-])
     (let loop ([x x])
-      (or (eq? x json-inf+) (eq? x (json-inf+))
-          (eq? x json-inf-) (eq? x (json-inf-))
-          (eq? x json-null) (eq? x (json-null))
+      (or (equal? x json-inf+) (eq? x (json-inf+))
+          (equal? x json-inf-) (eq? x (json-inf-))
+          (equal? x json-null) (eq? x (json-null))
           (js-null? x)
           (json-number? x)
           (boolean? x)
@@ -810,9 +810,9 @@
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-])
     (cond
-      [(or (eq? x json-inf+) (eq? x (json-inf+)) (js-inf+? x)) JSON-inf+]
-      [(or (eq? x json-inf-) (eq? x (json-inf-)) (js-inf-? x)) JSON-inf-]
-      [(or (eq? x json-null) (eq? x (json-null)) (js-null? x)) JSON-null]
+      [(or (equal? x json-inf+) (eq? x (json-inf+)) (js-inf+? x)) JSON-inf+]
+      [(or (equal? x json-inf-) (eq? x (json-inf-)) (js-inf-? x)) JSON-inf-]
+      [(or (equal? x json-null) (eq? x (json-null)) (js-null? x)) JSON-null]
       [(boolean? x) x]
       [(json-number? x) x]
       [(string? x) x]
