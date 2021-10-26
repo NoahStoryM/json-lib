@@ -185,8 +185,8 @@
   ;; test loop case
   (parameterize ([json-inf+ json-inf+]
                  [json-inf- json-inf-])
-    (test (json->string JSON-inf+) =error> "jsexpr->json:"
-          (json->string JSON-inf-) =error> "jsexpr->json:"))
+    (test (json->string JSON-inf+) =error> "json->string:"
+          (json->string JSON-inf-) =error> "json->string:"))
 
   (parameterize ([json-inf+ JSON-inf+]
                  [json-inf- JSON-inf-])
