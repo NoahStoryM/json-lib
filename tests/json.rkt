@@ -714,6 +714,32 @@
           ))
   )
 
+(define (convert-tests)
+  (for ([x (list 0 1 -1 12345 0.0 1.0 #t #f (λ (n) n) "" "abc" "abc\n\\"
+                   '() '(1 2 3) (λ (n) `(1 "2" (3) #t #f ,n)) '((((()))))
+                   '#hasheq()
+                   '#hasheq([x . 1])
+                   '#hasheq([x . 1] [y . 2])
+                   '#hasheq([|x\y| . 1] [y . 2])
+                   ;; string escapes
+                   "λ" "\U1D11E" ; goes as a plain character in normal encoding
+                   "\0" "\1" "\2" "\3" "\37" "\177" ; encoded as json \u escapes
+                   "\b" "\n" "\r" "\f" "\t"         ; same escapes in both
+                   "\a" "\v" "\e"                   ; does not use racket escapes
+                   )])
+      (define (N x null) (if (procedure? x) (x null) x))
+      (test
+       ;; default
+       (json->jsexpr (jsexpr->json (N x 'null)))
+       => (N x 'null)
+       ;; different null
+       (json->jsexpr (jsexpr->json (N x #\null) #:null #\null) #:null #\null)
+       => (N x #\null)
+       ;; JSON-null
+       (jsexpr->json (json->jsexpr (N x JSON-null)))
+       => (N x JSON-null)))
+  )
+
 (module port-with-particulars racket/base
   (require tests/eli-tester racket/contract)
   (provide
@@ -931,5 +957,5 @@
       do (pred-tests)
       do (print-tests)
       do (parse-tests)
-      ;; do (convert-tests)
+      do (convert-tests)
       )
