@@ -1,6 +1,6 @@
 #lang at-exp racket/base
 
-;; Mathias, added test for contracts on read-json
+;; Mathias, added test for contracts on read-jsexpr
 
 (require "../main.rkt" racket/string tests/eli-tester
          racket/port racket/contract)
@@ -8,51 +8,127 @@
 (define T string-append)
 
 (define (pred-tests)
-  (test (jsexpr? 0)
-        (jsexpr? 1)
-        (jsexpr? -1)
-        (jsexpr? 12345)
-        (jsexpr? 0.0)
-        (jsexpr? 1.0)
-        (not (jsexpr? 1/2))
-        (not (jsexpr? +i))
-        (not (jsexpr? 'foo))
-        (not (jsexpr? 'true))
-        (jsexpr? #t)
-        (jsexpr? #f)
-        (jsexpr? 'null)
-        (jsexpr? "")
-        (jsexpr? "abc")
-        (jsexpr? "abc\n\\")
-        (jsexpr? '())
-        (jsexpr? '(1 2 3))
-        (jsexpr? '(1 "2" (3) #t #f null))
-        (jsexpr? '((((())))))
-        (not (jsexpr? '(1 2 . 3)))
-        (not (jsexpr? '#(1 2 3)))
-        (jsexpr? '#hasheq())
-        (jsexpr? '#hasheq([x . 1]))
-        (jsexpr? '#hasheq([x . 1] [y . 2]))
-        (jsexpr? '#hash([x . 1] [y . 2])) ; fine as a jsexpr too
-        (jsexpr? '#hasheq([|x\y| . 1] [y . 2]))
-        (not (jsexpr? '#hasheq([1 . 1])))
-        (not (jsexpr? '#hasheq(["x" . 1])))
-        (not (jsexpr? '#hasheq(['() . 1])))
-        (not (jsexpr? (/ 1.0 0.0)))
-        (not (jsexpr? (/ -1.0 0.0)))
-        (not (jsexpr? (/ 0.0 0.0)))
-        (not (jsexpr? +inf.0))
-        (not (jsexpr? -inf.0))
-        (not (jsexpr? +nan.0))
-        (not (jsexpr? +inf.f))
-        (not (jsexpr? -inf.f))
-        (not (jsexpr? +nan.f))
-        )
-  ;; other `null' values
-  (parameterize ([json-null #\null])
-    (test (not (jsexpr? '(1 "2" (3) #t #f null)))
-          (jsexpr? '(1 "2" (3) #t #f #\null))
-          )))
+  ;; test jsexpr?
+  (begin
+    (test (jsexpr? 0)
+          (jsexpr? 1)
+          (jsexpr? -1)
+          (jsexpr? 12345)
+          (jsexpr? 0.0)
+          (jsexpr? 1.0)
+          (not (jsexpr? 1/2))
+          (not (jsexpr? +i))
+          (not (jsexpr? 'foo))
+          (not (jsexpr? 'true))
+          (jsexpr? #t)
+          (jsexpr? #f)
+          (jsexpr? 'null)
+          (jsexpr? "")
+          (jsexpr? "abc")
+          (jsexpr? "abc\n\\")
+          (jsexpr? '())
+          (jsexpr? '(1 2 3))
+          (jsexpr? '(1 "2" (3) #t #f null))
+          (jsexpr? '((((())))))
+          (not (jsexpr? '(1 2 . 3)))
+          (not (jsexpr? '#(1 2 3)))
+          (jsexpr? '#hasheq())
+          (jsexpr? '#hasheq([x . 1]))
+          (jsexpr? '#hasheq([x . 1] [y . 2]))
+          (jsexpr? '#hash([x . 1] [y . 2])) ; fine as a jsexpr too
+          (jsexpr? '#hasheq([|x\y| . 1] [y . 2]))
+          (not (jsexpr? '#hasheq([1 . 1])))
+          (not (jsexpr? '#hasheq(["x" . 1])))
+          (not (jsexpr? '#hasheq(['() . 1])))
+          (jsexpr? (hash-copy '#hasheq()))
+          (jsexpr? (hash-copy '#hasheq([x . 1])))
+          (jsexpr? (hash-copy '#hasheq([x . 1] [y . 2])))
+          (jsexpr? (hash-copy '#hash([x . 1] [y . 2]))) ; fine as a jsexpr too
+          (jsexpr? (hash-copy '#hasheq([|x\y| . 1] [y . 2])))
+          (not (jsexpr? (hash-copy '#hasheq([1 . 1]))))
+          (not (jsexpr? (hash-copy '#hasheq(["x" . 1]))))
+          (not (jsexpr? (hash-copy '#hasheq(['() . 1]))))
+          (not (jsexpr? (/ 1.0 0.0)))
+          (not (jsexpr? (/ -1.0 0.0)))
+          (not (jsexpr? (/ 0.0 0.0)))
+          (jsexpr? +inf.0)
+          (jsexpr? -inf.0)
+          (not (jsexpr? +nan.0))
+          (jsexpr? +inf.f)
+          (jsexpr? -inf.f)
+          (not (jsexpr? +nan.f))
+          )
+
+    ;; other `null' values
+    (parameterize ([json-null #\null])
+      (test (not (jsexpr? '(1 "2" (3) #t #f null)))
+            (jsexpr? '(1 "2" (3) #t #f #\null))))
+
+    ;; other `inf' values
+    (parameterize ([json-inf+ '+inf]
+                   [json-inf- '-inf])
+      (test (not (jsexpr? +inf.0))
+            (not (jsexpr? -inf.0))
+            (not (jsexpr? +inf.f))
+            (not (jsexpr? -inf.f))
+            (jsexpr? '+inf)
+            (jsexpr? '-inf)
+            (jsexpr? '+inf)
+            (jsexpr? '-inf))))
+
+  ;; test json?
+  (begin
+    (test (json? 0)
+          (json? 1)
+          (json? -1)
+          (json? 12345)
+          (json? 0.0)
+          (json? 1.0)
+          (not (json? 1/2))
+          (not (json? +i))
+          (not (json? 'foo))
+          (not (json? 'true))
+          (json? #t)
+          (json? #f)
+          (json? JSON-null)
+          (not (json? 'null))
+          (json? "")
+          (json? "abc")
+          (json? "abc\n\\")
+          (json? '())
+          (json? '(1 2 3))
+          (json? `(1 "2" (3) #t #f ,JSON-null))
+          (not (json? '(1 "2" (3) #t #f null)))
+          (json? `(1 "2" (3) #t #f ,JSON-null))
+          (json? '((((())))))
+          (not (json? '(1 2 . 3)))
+          (not (json? '#(1 2 3)))
+          (json? '#hasheq())
+          (json? '#hasheq([x . 1]))
+          (json? '#hasheq([x . 1] [y . 2]))
+          (json? '#hash([x . 1] [y . 2])) ; fine as a json too
+          (json? '#hasheq([|x\y| . 1] [y . 2]))
+          (not (json? '#hasheq([1 . 1])))
+          (not (json? '#hasheq(["x" . 1])))
+          (not (json? '#hasheq(['() . 1])))
+          (not (json? (hash-copy '#hasheq())))
+          (not (json? (hash-copy '#hasheq([x . 1]))))
+          (not (json? (hash-copy '#hasheq([x . 1] [y . 2]))))
+          (not (json? (hash-copy '#hash([x . 1] [y . 2]))))
+          (not (json? (hash-copy '#hasheq([|x\y| . 1] [y . 2]))))
+          (not (json? (/ 1.0 0.0)))
+          (not (json? (/ -1.0 0.0)))
+          (not (json? (/ 0.0 0.0)))
+          (json? JSON-inf+)
+          (json? JSON-inf-)
+          (not (json? +inf.0))
+          (not (json? -inf.0))
+          (not (json? +nan.0))
+          (not (json? +inf.f))
+          (not (json? -inf.f))
+          (not (json? +nan.f))
+          ))
+  )
 
 (define (print-tests)
   (for ([x (list 0 1 -1 12345 0.0 1.0 #t #f (λ(n) n) "" "abc" "abc\n\\"
@@ -89,6 +165,7 @@
         (jsexpr->string (string->jsexpr "{\"\U0010FFFF\":\"\U0010FFFF\"}"))
         => "{\"\U0010FFFF\":\"\U0010FFFF\"}"
         (jsexpr->string #hash[(a . 1) (b . 2)]) => "{\"a\":1,\"b\":2}"
+        (jsexpr->string (hash-copy #hash[(a . 1) (b . 2)])) => "{\"a\":1,\"b\":2}"
         (jsexpr->string (string->jsexpr "{\"\U0010FFFF\":\"\U0010FFFF\"}")
                         #:encode 'all)
         => "{\"\\udbff\\udfff\":\"\\udbff\\udfff\"}"
@@ -134,6 +211,9 @@
         (string->jsexpr @T{ [1,[2],3] }) => '(1 (2) 3)
         (string->jsexpr @T{ [ 1 , [ 2 ] , 3 ] }) => '(1 (2) 3)
         (string->jsexpr @T{ [true, false, null] }) => '(#t #f null)
+        (immutable? (string->jsexpr @T{ {} }))
+        (immutable? (string->jsexpr @T{ {"x":1} }))
+        (immutable? (string->jsexpr @T{ {"x":1,"y":2} }))
         (string->jsexpr @T{ {} }) => '#hasheq()
         (string->jsexpr @T{ {"x":1} }) => '#hasheq([x . 1])
         (string->jsexpr @T{ {"x":1,"y":2} }) => '#hasheq([x . 1] [y . 2])
@@ -145,10 +225,10 @@
         (string->jsexpr @T{ "\uD834\uDD1E" }) => "\U1D11E"
         (string->jsexpr @T{ "\ud834\udd1e" }) => "\U1d11e"
         ;; INPUT PORT is optional
-        (with-input-from-string "[]" read-json)
+        (with-input-from-string "[]" read-jsexpr)
         => (parameterize ((json-null '())) (json-null))
         ;; EOF detection
-        (for/list ([je (in-port read-json
+        (for/list ([je (in-port read-jsexpr
                                 (open-input-string
                                  @T{ 1 [2,3] "four" }))])
           je)
@@ -217,114 +297,120 @@
         ;;  - eof is the entire thing in the stream (and thus it is returned), or
         ;;  - the eof triggered an error (ie the json object isn't complete)
         (let ([p (port-with-particulars (list #"1" eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         => (list 1 (list eof 97))
 
         (let ([p (port-with-particulars (list eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         =>
         (list eof (list 97))
 
         (let ([p (port-with-particulars (list eof eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         =>
         (list eof (list eof 97))
 
         (let ([p (port-with-particulars (list eof eof #"a"))])
-          (list (read-json p)
-                (read-json p)
+          (list (read-jsexpr p)
+                (read-jsexpr p)
                 (flush-data p)))
         =>
         (list eof eof (list 97))
 
         (let ([p (port-with-particulars (list #"\"1\"" eof eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         => (list "1" (list eof eof 97))
 
         (let ([p (port-with-particulars (list #"\"1" eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"[1, 2]" eof eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         => (list (list 1 2) (list eof eof 97))
 
         (let ([p (port-with-particulars (list #"[1, 2" eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"[1," eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"{ \"x\":  11 }" eof eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         => (list (hasheq 'x 11) (list eof eof 97))
 
         (let ([p (port-with-particulars (list #"{ \"x\":  11 " eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"{ \"x\" " eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"{ \"x\" : " eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"{  " eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"{" eof eof #"a"))])
-          (list (read-json/swallow-error p)
+          (list (read-jsexpr/swallow-error p)
                 (flush-data p)))
         => (list 'exn (list eof 97))
 
         (let ([p (port-with-particulars (list #"true" eof eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         => (list #t (list eof eof 97))
 
         (let ([p (port-with-particulars (list #"false" eof eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         => (list #f (list eof eof 97))
 
         (let ([p (port-with-particulars (list #"null" eof eof #"a"))])
-          (list (read-json p)
+          (list (read-jsexpr p)
                 (flush-data p)))
         => (list 'null (list eof eof 97))
 
-        ;; tests to make sure read-json doesn't hang when the
+        ;; tests to make sure read-jsexpr doesn't hang when the
         ;; input is already enough to be sure we're doomed
-        (read-json (port-with-particulars #"started"))
-        =error> #rx"read-json: bad input starting #\"started\""
+        (read-jsexpr (port-with-particulars #"started"))
+        =error> #rx"read-jsexpr: bad input starting #\"started\""
 
-        (read-json (port-with-particulars #"try"))
-        =error> #rx"read-json: bad input starting #\"try\""
+        (read-jsexpr (port-with-particulars #"try"))
+        =error> #rx"read-jsexpr: bad input starting #\"try\""
 
-        (read-json (port-with-particulars #"falz"))
-        =error> #rx"read-json: bad input starting #\"falz\""
+        (read-jsexpr (port-with-particulars #"falz"))
+        =error> #rx"read-jsexpr: bad input starting #\"falz\""
 
-        (read-json (port-with-particulars #"noll"))
-        =error> #rx"read-json: bad input starting #\"noll\""
+        (read-jsexpr (port-with-particulars #"noll"))
+        =error> #rx"read-jsexpr: bad input starting #\"noll\""
 
-        ))
+        )
+
+  ;; test `jsexpr-mutable?'
+  (parameterize ([jsexpr-mutable? #t])
+    (test (not (immutable? (string->jsexpr @T{ {} })))
+          (not (immutable? (string->jsexpr @T{ {"x":1} })))
+          (not (immutable? (string->jsexpr @T{ {"x":1,"y":2} }))))))
 
 (module port-with-particulars racket/base
   (require tests/eli-tester racket/contract)
@@ -525,12 +611,12 @@
         =>
         #"abc\0\0"))
 
-(define (read-json/swallow-error p)
+(define (read-jsexpr/swallow-error p)
   (with-handlers ([(λ (x) (and (exn:fail:read? x)
-                                (regexp-match #rx"^[^\n]*read-json:" (exn-message x))))
+                                (regexp-match #rx"^[^\n]*read-jsexpr:" (exn-message x))))
                    (λ (x) 'exn)])
-    (read-json p)
-    (error 'read-json/swallow-error "did not raise an error")))
+    (read-jsexpr p)
+    (error 'read-jsexpr/swallow-error "did not raise an error")))
 
 (test do (port-with-particulars-tests)
       do (pred-tests)

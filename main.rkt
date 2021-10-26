@@ -30,15 +30,24 @@
 
 (provide
  ;; Parameter
- json-null jsexpr-mutable? ;; Parameter
+ json-null json-inf+ json-inf- jsexpr-mutable?
 
- JSON json? jsexpr?
+ ;; Type and Predicate
+ JSON json? JSExpr jsexpr?
 
+ JS-Inf     js-inf?  js-inf-val
+ JS-Pos-Inf js-inf+? JSON-inf+
+ JS-Neg-Inf js-inf-? JSON-inf-
+
+ JS-Null    js-null? js-null-val JSON-null
+
+ ;; IO
  write-JSON read-JSON
 
  write-jsexpr (rename-out [write-jsexpr write-json])
  read-jsexpr  (rename-out [read-jsexpr  read-json])
 
+ ;; Convenience Functions
  json->jsexpr jsexpr->json
 
  json->string string->json
@@ -58,14 +67,14 @@
 (define-type Inexact-Rational (Refine [n : Inexact-Real] (! n (U Inexact-Real-Nan Inexact-Real-Inf))))
 (define-predicate inexact-rational? Inexact-Rational)
 
-(define-type JS-Inf (U +1.7976931348623157e+308 -1.7976931348623157e+308))
-(define-predicate json-inf? JS-Inf)
-
 (define-type JS-Number (U Integer Inexact-Rational JS-Inf))
 (define-predicate json-number? JS-Number)
 
-(struct js-null ([val : (Parameter Any)]) #:transparent #:type-name JS-Null)
-(define json-null? (procedure-rename js-null? 'json-null?))
+(struct js-inf ([val : (Parameter JSExpr)]) #:transparent #:type-name JS-Inf)
+(struct js-inf+ JS-Inf () #:transparent #:type-name JS-Pos-Inf)
+(struct js-inf- JS-Inf () #:transparent #:type-name JS-Neg-Inf)
+
+(struct js-null ([val : (Parameter JSExpr)]) #:transparent #:type-name JS-Null)
 
 (define-type JS-List (Listof JSON))
 (define-predicate json-list? JS-List)
@@ -78,42 +87,59 @@
                      JS-List   JS-Object))
 (define-predicate json? JSON)
 
-(: jsexpr? [-> Any [#:null Any] Boolean])
-(define (jsexpr? x #:null [jsnull (json-null)])
-  (let loop ([x x])
-    (or (json-number? x)
-        (boolean? x)
-        (or (json-null? x) (eq? x jsnull))
-        (string? x)
-        (and (list? x) (andmap loop x))
-        (and (hash? x) (for/and ([(k v) (in-hash x)])
-                         (and (symbol? k) (loop v)))))))
+(define-type JSExpr Any)
+(: jsexpr? [-> Any
+               [#:null JSExpr]
+               [#:inf+ JSExpr]
+               [#:inf- JSExpr]
+               Boolean])
+(define (jsexpr? x
+                 #:null [jsnull (json-null)]
+                 #:inf+ [jsinf+ (json-inf+)]
+                 #:inf- [jsinf- (json-inf-)])
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-])
+    (let loop ([x x])
+      (or (or (eq? x (json-inf+)) (js-inf+? x))
+          (or (eq? x (json-inf-)) (js-inf-? x))
+          (or (eq? x (json-null)) (js-null? x))
+          (or (exact-integer? x) (inexact-rational? x))
+          (boolean? x)
+          (string? x)
+          (and (list? x) (andmap loop x))
+          (and (hash? x) (for/and ([(k v) (in-hash x)])
+                           (and (symbol? k) (loop v))))))))
 
 
 (define-type Encode (U 'control 'all))
-
-(: to-json-number [-> (U JS-Number Inexact-Real) JS-Number])
-(define to-json-number
-  (λ (n)
-    (cond
-      [(json-number? n) n]
-      [(inexact-real-nan? n) (raise-type-error 'to-json-number "json-number?" n)]
-      [else
-       (case n
-         [(+inf.0 +inf.f) +1.7976931348623157e+308]
-         [(-inf.0 -inf.f) -1.7976931348623157e+308]
-         [else n])])))
-
 
 ;; -----------------------------------------------------------------------------
 ;; CUSTOMIZATION
 
 ;; The default translation for a JSON `null' value
-(: json-null (Parameter Any))
+(: json-null (Parameter JSExpr))
 (define json-null (make-parameter 'null))
 
 (: JSON-null JS-Null)
 (define JSON-null (js-null json-null))
+
+
+;; The default translation for a Racket `+inf' value
+(: json-inf+ (Parameter JSExpr))
+(define json-inf+ (make-parameter +inf.0))
+
+(: JSON-inf+ JS-Pos-Inf)
+(define JSON-inf+ (js-inf+ json-inf+))
+
+
+;; The default translation for a Racket `-inf' value
+(: json-inf- (Parameter JSExpr))
+(define json-inf- (make-parameter -inf.0))
+
+(: JSON-inf- JS-Neg-Inf)
+(define JSON-inf- (js-inf- json-inf-))
+
 
 (: jsexpr-mutable? (Parameter Boolean))
 (define jsexpr-mutable? (make-parameter #f))
@@ -121,12 +147,22 @@
 ;; -----------------------------------------------------------------------------
 ;; GENERATION  (from Racket to JSON)
 
-(: write-jsexpr [->* (JSON) (Output-Port #:null Any #:encode Encode) Void])
+(: write-jsexpr [->* (JSON)
+                     (Output-Port
+                      #:null JSExpr
+                      #:inf+ JSExpr
+                      #:inf- JSExpr
+                      #:encode Encode)
+                     Void])
 (define (write-jsexpr x
                       [o (current-output-port)]
                       #:null [jsnull (json-null)]
+                      #:inf+ [jsinf+ (json-inf+)]
+                      #:inf- [jsinf- (json-inf-)]
                       #:encode [enc 'control])
-  (parameterize ([json-null jsnull])
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-])
     (write-JSON* 'write-jsexpr (jsexpr->json x) o enc)))
 
 (: write-JSON [->* (JSON) (Output-Port #:encode Encode) Void])
@@ -175,8 +211,7 @@
       ;; so there should never be a \U in the output of this function); but I
       ;; don't know if there's a known specification to what gets a \U
       [(control) #rx"[\0-\37\\\"\177]"]
-      [(all)     #rx"[\0-\37\\\"\177-\U10FFFF]"]
-      [else (raise-type-error who "encode?" enc)]))
+      [(all)     #rx"[\0-\37\\\"\177-\U10FFFF]"]))
 
   (: write-JSON-string [-> String Index])
   (define (write-JSON-string str)
@@ -187,10 +222,20 @@
 
   (let loop : Any ([x x])
     (cond
-      [(json-number? x) (write x o)]
-      [(eq? x #f)     (write-bytes #"false" o)]
-      [(eq? x #t)     (write-bytes #"true" o)]
-      [(json-null? x) (write-bytes #"null" o)]
+      [(and (js-inf+? x)
+            ;; eliminate endless loops
+            (not (eq? (json-inf+) json-inf+))
+            (not (js-inf+? (json-inf+))))
+       (write-JSON (jsexpr->json (json-inf+)) o #:encode enc)]
+      [(and (js-inf-? x)
+            ;; eliminate endless loops
+            (not (eq? (json-inf-) json-inf-))
+            (not (js-inf-? (json-inf-))))
+       (write-JSON (jsexpr->json (json-inf-)) o #:encode enc)]
+      [(js-null? x) (write-bytes #"null"  o)]
+      [(eq? x #f)   (write-bytes #"false" o)]
+      [(eq? x #t)   (write-bytes #"true"  o)]
+      [(or (exact-integer? x) (inexact-rational? x)) (write x o)]
       [(string? x) (write-JSON-string x)]
       [(json-list? x)
        (write-bytes #"[" o)
@@ -217,18 +262,29 @@
              [-> Symbol JSON Any])
         ;; order output
         #t)
-       (write-bytes #"}" o)]))
+       (write-bytes #"}" o)]
+      [else (raise-type-error who "legal JSON value" x)]))
 
   (void))
 
 ;; -----------------------------------------------------------------------------
 ;; PARSING (from JSON to Racket)
 
-(: read-jsexpr [->* () (Input-Port #:null Any #:mutable? Boolean) Any])
+(: read-jsexpr [->* ()
+                    (Input-Port
+                     #:null JSExpr
+                     #:inf+ JSExpr
+                     #:inf- JSExpr
+                     #:mutable? Boolean)
+                    JSExpr])
 (define (read-jsexpr [i (current-input-port)]
                      #:null [jsnull (json-null)]
+                     #:inf+ [jsinf+ (json-inf+)]
+                     #:inf- [jsinf- (json-inf-)]
                      #:mutable? [mutable? (jsexpr-mutable?)])
   (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-]
                  [jsexpr-mutable? mutable?])
     (define js (read-JSON* 'read-jsexpr i))
     (if (eof-object? js)
@@ -320,22 +376,24 @@
              (define buf (make-bytes 6 c))
 
              (let utf8-loop : String ([start : Natural 0] [end : Natural 1])
-                  (define-values (wrote-n read-n state) (bytes-convert cvtr buf start end buf 0 6))
-                  (case state
-                    [(complete)
-                     (keep-char (bytes-utf-8-ref buf 0) result pos cvtr)]
-                    [(error)
-                     (err "UTF-8 decoding error at ~e" (subbytes buf 0 end))]
-                    [(continues)
-                     (err "no enough space at ~e" buf)]
-                    [(aborts)
-                     (define c (read-byte i))
-                     (cond
-                       [(eof-object? c)
-                        (err "unexpected end-of-file")]
-                       [else
-                        (bytes-set! buf end c)
-                        (utf8-loop (+ start read-n) (add1 end))])]))]))
+               (define-values (wrote-n read-n state)
+                 (bytes-convert cvtr buf start end buf 0 6))
+
+               (case state
+                 [(complete)
+                  (keep-char (bytes-utf-8-ref buf 0) result pos cvtr)]
+                 [(error)
+                  (err "UTF-8 decoding error at ~e" (subbytes buf 0 end))]
+                 [(continues)
+                  (err "no enough space at ~e" buf)]
+                 [(aborts)
+                  (define c (read-byte i))
+                  (cond
+                    [(eof-object? c)
+                     (err "unexpected end-of-file")]
+                    [else
+                     (bytes-set! buf end c)
+                     (utf8-loop (+ start read-n) (add1 end))])]))]))
 
         (: read-escape [-> Char String Natural (Option Bytes-Converter) String])
         (define (read-escape esc result pos converter)
@@ -416,14 +474,14 @@
           [(eqv? end ch) (read-byte i) '()]
           [else
            (let loop : (Listof A) ([l : (Listof A) (list (read-one))])
-                (define ch (skip-whitespace))
+             (define ch (skip-whitespace))
 
-                (cond
-                  [(eqv? ch end) (read-byte i) (reverse l)]
-                  [(eqv? ch #\,) (read-byte i) (loop (cons (read-one) l))]
-                  [else
-                   (read-byte i) ;; consume the eof
-                   (err "error while parsing a json ~a" what)]))]))
+             (cond
+               [(eqv? ch end) (read-byte i) (reverse l)]
+               [(eqv? ch #\,) (read-byte i) (loop (cons (read-one) l))]
+               [else
+                (read-byte i) ;; consume the eof
+                (err "error while parsing a json ~a" what)]))]))
 
       ;;
       (: read-hash [-> (Immutable-HashTable Symbol JSON)])
@@ -442,8 +500,8 @@
           (cons (string->symbol k) (read-JSON)))
 
         (for/hasheq : (Immutable-HashTable Symbol JSON)
-                    ([p (in-list (read-list 'object #\} read-pair))])
-                    (values (car p) (cdr p))))
+             ([p (in-list (read-list 'object #\} read-pair))])
+          (values (car p) (cdr p))))
 
       ;;
       (: read-literal [-> Bytes Void])
@@ -665,16 +723,46 @@
 ;; -----------------------------------------------------------------------------
 ;; CONVENIENCE FUNCTIONS
 
-(: json->jsexpr [-> JSON [#:null Any] [#:mutable? Boolean] Any])
+(: to-json-number [-> (U JS-Number Inexact-Real)
+                      [#:inf+ JSExpr]
+                      [#:inf- JSExpr]
+                      JS-Number])
+(define (to-json-number n
+                        #:inf+ [jsinf+ (json-inf+)]
+                        #:inf- [jsinf- (json-inf-)])
+  (parameterize ([json-inf+ jsinf+]
+                 [json-inf- jsinf-])
+    (cond
+      [(or (eq? n +inf.0) (eq? n (json-inf+))) JSON-inf+]
+      [(or (eq? n -inf.0) (eq? n (json-inf-))) JSON-inf-]
+      [(json-number? n) n]
+      [(inexact-real-nan? n) (raise-type-error 'to-json-number "json-number?" n)]
+      [else n])))
+
+
+(: json->jsexpr [-> JSON
+                    [#:null JSExpr]
+                    [#:inf+ JSExpr]
+                    [#:inf- JSExpr]
+                    [#:mutable? Boolean]
+                    JSExpr])
 (define (json->jsexpr js
                       #:null [jsnull (json-null)]
+                      #:inf+ [jsinf+ (json-inf+)]
+                      #:inf- [jsinf- (json-inf-)]
                       #:mutable? [mutable? (jsexpr-mutable?)])
   (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-]
                  [jsexpr-mutable? mutable?])
     (cond
-      [(json-number? js) js]
+      [(json-number? js)
+       (cond [(or (exact-integer? js) (inexact-rational? js)) js]
+             [(or (eq? js (json-inf+)) (js-inf+? js)) (json-inf+)]
+             [(or (eq? js (json-inf-)) (js-inf-? js)) (json-inf-)]
+             [else (raise-type-error 'json->jsexpr "json?" js)])]
+      [(js-null? js) (json-null)]
       [(boolean? js) js]
-      [(json-null? js) js]
       [(string? js) js]
       [(json-list? js) (map json->jsexpr js)]
       [(json-object? js)
@@ -685,17 +773,28 @@
             (hash-set! result k v))
           result]
          [else
-          (for/hasheq : (Immutable-HashTable Symbol Any)
+          (for/hasheq : (Immutable-HashTable Symbol JSExpr)
                ([(k v) (in-hash js)])
             (values k (json->jsexpr v)))])])))
 
-(: jsexpr->json [-> Any [#:null Any] JSON])
-(define (jsexpr->json x #:null [jsnull (json-null)])
-  (parameterize ([json-null jsnull])
+(: jsexpr->json [-> JSExpr
+                    [#:null JSExpr]
+                    [#:inf+ JSExpr]
+                    [#:inf- JSExpr]
+                    JSON])
+(define (jsexpr->json x
+                      #:null [jsnull (json-null)]
+                      #:inf+ [jsinf+ (json-inf+)]
+                      #:inf- [jsinf- (json-inf-)])
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-])
     (cond
-      [(json-number? x) x]
+      [(or (eq? x (json-inf+)) (js-inf+? x)) JSON-inf+]
+      [(or (eq? x (json-inf-)) (js-inf-? x)) JSON-inf-]
+      [(or (eq? x (json-null)) (js-null? x)) JSON-null]
       [(boolean? x) x]
-      [(or (json-null? x) (eq? x jsnull)) JSON-null]
+      [(and (json-number? x) (or (exact-integer? x) (inexact-rational? x))) x]
       [(string? x) x]
       [(list? x) (map jsexpr->json x)]
       [(hash? x)
@@ -717,33 +816,87 @@
   (write-JSON* 'json->bytes js o enc)
   (get-output-bytes o))
 
-(: string->json [-> String JSON])
+(: string->json [-> String (U EOF JSON)])
 (define (string->json str)
   (define i (open-input-string str))
-  (assert (read-JSON* 'string->json i) json?))
+  (read-JSON* 'string->json i))
 
-(: bytes->json [-> Bytes JSON])
+(: bytes->json [-> Bytes (U EOF JSON)])
 (define (bytes->json bs)
   (define i (open-input-bytes bs))
-  (assert (read-JSON* 'bytes->json i) json?))
+  (read-JSON* 'bytes->json i))
 
 
-(: jsexpr->string [-> Any [#:null Any] [#:encode Encode] String])
-(define (jsexpr->string x #:null [jsnull (json-null)] #:encode [enc 'control])
-  (json->string (jsexpr->json x) #:encode enc))
-
-(: jsexpr->bytes [-> JSON [#:null Any] [#:encode Encode] Bytes])
-(define (jsexpr->bytes x #:null [jsnull (json-null)] #:encode [enc 'control])
-  (json->bytes (jsexpr->json x) #:encode enc))
-
-(: string->jsexpr [-> String [#:null Any] [#:mutable? Boolean] Any])
-(define (string->jsexpr str #:null [jsnull (json-null)] #:mutable? [mutable? (jsexpr-mutable?)])
+(: jsexpr->string [-> JSExpr
+                      [#:null JSExpr]
+                      [#:inf+ JSExpr]
+                      [#:inf- JSExpr]
+                      [#:encode  Encode]
+                      String])
+(define (jsexpr->string x
+                        #:null [jsnull (json-null)]
+                        #:inf+ [jsinf+ (json-inf+)]
+                        #:inf- [jsinf- (json-inf-)]
+                        #:encode  [enc 'control])
   (parameterize ([json-null jsnull]
-                 [jsexpr-mutable? mutable?])
-    (json->jsexpr (string->json str))))
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-])
+    (json->string (jsexpr->json x) #:encode enc)))
 
-(: bytes->jsexpr [-> Bytes [#:null Any] [#:mutable? Boolean] Any])
-(define (bytes->jsexpr bs #:null [jsnull (json-null)] #:mutable? [mutable? (jsexpr-mutable?)])
+(: jsexpr->bytes [-> JSExpr
+                     [#:null JSExpr]
+                     [#:inf+ JSExpr]
+                     [#:inf- JSExpr]
+                     [#:encode  Encode]
+                     Bytes])
+(define (jsexpr->bytes x
+                       #:null [jsnull (json-null)]
+                       #:inf+ [jsinf+ (json-inf+)]
+                       #:inf- [jsinf- (json-inf-)]
+                       #:encode  [enc 'control])
   (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-])
+    (json->bytes (jsexpr->json x) #:encode enc)))
+
+(: string->jsexpr [-> String
+                      [#:null JSExpr]
+                      [#:inf+ JSExpr]
+                      [#:inf- JSExpr]
+                      [#:mutable? Boolean]
+                      (U EOF JSExpr)])
+(define (string->jsexpr str
+                        #:null [jsnull (json-null)]
+                        #:inf+ [jsinf+ (json-inf+)]
+                        #:inf- [jsinf- (json-inf-)]
+                        #:mutable? [mutable? (jsexpr-mutable?)])
+  (define i (open-input-string str))
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-]
                  [jsexpr-mutable? mutable?])
-    (json->jsexpr (bytes->json bs))))
+    (define js (read-JSON* 'string->jsexpr i))
+    (if (eof-object? js)
+        eof
+        (json->jsexpr js))))
+
+(: bytes->jsexpr [-> Bytes
+                     [#:null JSExpr]
+                     [#:inf+ JSExpr]
+                     [#:inf- JSExpr]
+                     [#:mutable? Boolean]
+                     (U EOF JSExpr)])
+(define (bytes->jsexpr bs
+                       #:null [jsnull (json-null)]
+                       #:inf+ [jsinf+ (json-inf+)]
+                       #:inf- [jsinf- (json-inf-)]
+                       #:mutable? [mutable? (jsexpr-mutable?)])
+  (define i (open-input-bytes bs))
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-]
+                 [jsexpr-mutable? mutable?])
+    (define js (read-JSON* 'bytes->jsexpr i))
+    (if (eof-object? js)
+        eof
+        (json->jsexpr js))))
