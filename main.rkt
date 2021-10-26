@@ -96,10 +96,10 @@
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-])
     (let loop ([x x])
-      (or (or (eq? x (json-inf+)) (js-inf+? x))
-          (or (eq? x (json-inf-)) (js-inf-? x))
-          (or (eq? x (json-null)) (js-null? x))
-          (or (exact-integer? x) (inexact-rational? x))
+      (or (eq? x json-inf+) (eq? x (json-inf+)) (js-inf+? x)
+          (eq? x json-inf-) (eq? x (json-inf-)) (js-inf-? x)
+          (eq? x json-null) (eq? x (json-null)) (js-null? x)
+          (exact-integer? x) (inexact-rational? x)
           (boolean? x)
           (string? x)
           (and (list? x) (andmap loop x))
@@ -766,6 +766,7 @@
       [(json-object? js)
        (cond
          [mutable?
+          (: result (Mutable-HashTable Symbol JSExpr))
           (define result (make-hasheq))
           (for ([(k v) (in-hash js)])
             (hash-set! result k v))
@@ -788,9 +789,9 @@
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-])
     (cond
-      [(or (eq? x (json-inf+)) (js-inf+? x)) JSON-inf+]
-      [(or (eq? x (json-inf-)) (js-inf-? x)) JSON-inf-]
-      [(or (eq? x (json-null)) (js-null? x)) JSON-null]
+      [(or (eq? x json-inf+) (eq? x (json-inf+)) (js-inf+? x)) JSON-inf+]
+      [(or (eq? x json-inf-) (eq? x (json-inf-)) (js-inf-? x)) JSON-inf-]
+      [(or (eq? x json-null) (eq? x (json-null)) (js-null? x)) JSON-null]
       [(boolean? x) x]
       [(and (json-number? x) (or (exact-integer? x) (inexact-rational? x))) x]
       [(string? x) x]
