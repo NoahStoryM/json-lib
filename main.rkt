@@ -235,14 +235,14 @@
         (cond
           [(and (js-inf+? js)
                 ;; eliminate endless loops
-                (not (procedure? (json-inf+)))
+                (not (eq? json-inf+ (json-inf+)))
                 (not (js-inf+? (json-inf+))))
            (define jsinf+ (json-inf+))
            (parameterize ([json-inf+ undefined])
              (loop (jsexpr->json jsinf+)))]
           [(and (js-inf-? js)
                 ;; eliminate endless loops
-                (not (procedure? (json-inf-)))
+                (not (eq? json-inf- (json-inf-)))
                 (not (js-inf-? (json-inf-))))
            (define jsinf- (json-inf-))
            (parameterize ([json-inf- undefined])
@@ -808,9 +808,9 @@
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-])
     (cond
-      [(or (eq? x (json-inf+)) (js-inf+? x)) JSON-inf+]
-      [(or (eq? x (json-inf-)) (js-inf-? x)) JSON-inf-]
-      [(or (eq? x (json-null)) (js-null? x)) JSON-null]
+      [(or (eq? x json-inf+) (eq? x (json-inf+)) (js-inf+? x)) JSON-inf+]
+      [(or (eq? x json-inf-) (eq? x (json-inf-)) (js-inf-? x)) JSON-inf-]
+      [(or (eq? x json-null) (eq? x (json-null)) (js-null? x)) JSON-null]
       [(boolean? x) x]
       [(and (json-number? x) (or (exact-integer? x) (inexact-rational? x))) x]
       [(string? x) x]
