@@ -737,8 +737,7 @@
       [(or (eq? n +inf.0) (eq? n (json-inf+))) JSON-inf+]
       [(or (eq? n -inf.0) (eq? n (json-inf-))) JSON-inf-]
       [(json-number? n) n]
-      [(inexact-real-nan? n) (raise-type-error 'to-json-number "json-number?" n)]
-      [else n])))
+      [(inexact-real-nan? n) (raise-type-error 'to-json-number "json-number?" n)])))
 
 
 (: json->jsexpr [-> JSON
