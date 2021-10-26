@@ -211,7 +211,27 @@
           (json->string (string->json "{\"\U0010FFFF\":\"\U0010FFFF\"}")
                         #:encode 'all)
           => "{\"\\udbff\\udfff\":\"\\udbff\\udfff\"}"
-          ))
+          )
+
+    ;; test inf
+    (parameterize ([json-inf+ "+inf"]
+                   [json-inf- "-inf"])
+      (test (json->string JSON-inf+) => "\"+inf\""
+            (json->string JSON-inf-) => "\"-inf\""
+            ))
+
+    ;; test loop case
+    (parameterize ([json-inf+ json-inf+]
+                   [json-inf- json-inf-])
+      (test (json->string JSON-inf+) =error> "jsexpr->json:"
+            (json->string JSON-inf-) =error> "jsexpr->json:"
+            ))
+
+    (parameterize ([json-inf+ JSON-inf+]
+                   [json-inf- JSON-inf-])
+      (test (json->string JSON-inf+) =error> "json->string:"
+            (json->string JSON-inf-) =error> "json->string:"
+            )))
   )
 
 (define (parse-tests)
@@ -910,4 +930,6 @@
 (test do (port-with-particulars-tests)
       do (pred-tests)
       do (print-tests)
-      do (parse-tests))
+      do (parse-tests)
+      ;; do (convert-tests)
+      )
