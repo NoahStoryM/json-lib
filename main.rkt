@@ -35,11 +35,11 @@
  ;; Type and Predicate
  JSON json? JSExpr jsexpr?
 
- JS-Inf     js-inf?  js-inf-val
+ JS-Inf     js-inf?
  JS-Pos-Inf js-inf+? JSON-inf+
  JS-Neg-Inf js-inf-? JSON-inf-
 
- JS-Null    js-null? js-null-val JSON-null
+ JS-Null    js-null? JSON-null
 
  ;; IO
  write-JSON read-JSON
@@ -70,11 +70,12 @@
 (define-type JS-Number (U Integer Inexact-Rational JS-Inf))
 (define-predicate json-number? JS-Number)
 
-(struct js-inf ([val : (Parameter JSExpr)]) #:transparent #:type-name JS-Inf)
-(struct js-inf+ JS-Inf () #:transparent #:type-name JS-Pos-Inf)
-(struct js-inf- JS-Inf () #:transparent #:type-name JS-Neg-Inf)
+(struct js-inf+ () #:transparent #:type-name JS-Pos-Inf)
+(struct js-inf- () #:transparent #:type-name JS-Neg-Inf)
+(define-type JS-Inf (U JS-Pos-Inf JS-Neg-Inf))
+(define-predicate js-inf? JS-Inf)
 
-(struct js-null ([val : (Parameter JSExpr)]) #:transparent #:type-name JS-Null)
+(struct js-null () #:transparent #:type-name JS-Null)
 
 (define-type JS-List (Listof JSON))
 (define-predicate json-list? JS-List)
@@ -123,7 +124,7 @@
 (define json-null (make-parameter 'null))
 
 (: JSON-null JS-Null)
-(define JSON-null (js-null json-null))
+(define JSON-null (js-null))
 
 
 ;; The default translation for a Racket `+inf' value
@@ -131,7 +132,7 @@
 (define json-inf+ (make-parameter +inf.0))
 
 (: JSON-inf+ JS-Pos-Inf)
-(define JSON-inf+ (js-inf+ json-inf+))
+(define JSON-inf+ (js-inf+))
 
 
 ;; The default translation for a Racket `-inf' value
@@ -139,7 +140,7 @@
 (define json-inf- (make-parameter -inf.0))
 
 (: JSON-inf- JS-Neg-Inf)
-(define JSON-inf- (js-inf- json-inf-))
+(define JSON-inf- (js-inf-))
 
 
 (: jsexpr-mutable? (Parameter Boolean))
@@ -238,14 +239,14 @@
         (cond
           [(and (js-inf+? js)
                 ;; eliminate endless loops
-                (not (eq? json-inf+ (json-inf+)))
+                (not (equal? json-inf+ (json-inf+)))
                 (not (js-inf+? (json-inf+))))
            (define jsinf+ (json-inf+))
            (parameterize ([json-inf+ undefined])
              (loop (jsexpr->json jsinf+)))]
           [(and (js-inf-? js)
                 ;; eliminate endless loops
-                (not (eq? json-inf- (json-inf-)))
+                (not (equal? json-inf- (json-inf-)))
                 (not (js-inf-? (json-inf-))))
            (define jsinf- (json-inf-))
            (parameterize ([json-inf- undefined])
