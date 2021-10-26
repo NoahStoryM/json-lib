@@ -131,45 +131,88 @@
   )
 
 (define (print-tests)
-  (for ([x (list 0 1 -1 12345 0.0 1.0 #t #f (λ(n) n) "" "abc" "abc\n\\"
-                 '() '(1 2 3) (λ(n) `(1 "2" (3) #t #f ,n)) '((((()))))
-                 '#hasheq()
-                 '#hasheq([x . 1])
-                 '#hasheq([x . 1] [y . 2])
-                 '#hasheq([|x\y| . 1] [y . 2])
-                 ;; string escapes
-                 "λ" "\U1D11E" ; goes as a plain character in normal encoding
-                 "\0" "\1" "\2" "\3" "\37" "\177" ; encoded as json \u escapes
-                 "\b" "\n" "\r" "\f" "\t"         ; same escapes in both
-                 "\a" "\v" "\e"                   ; does not use racket escapes
-                 )])
-    (define (N x null) (if (procedure? x) (x null) x))
-    (test
-     ;; default
-     (string->jsexpr (jsexpr->string (N x 'null)))
-     => (N x 'null)
-     ;; different null
-     (string->jsexpr (jsexpr->string (N x #\null) #:null #\null) #:null #\null)
-     => (N x #\null)
-     ;; encode all non-ascii
-     (string->jsexpr (jsexpr->string (N x 'null) #:encode 'all))
-     => (N x 'null)))
-  ;; also test some specific expected encodings
-  (test (jsexpr->string "\0\1\2\3") => "\"\\u0000\\u0001\\u0002\\u0003\""
-        (jsexpr->string "\b\n\r\f\t\\\"") => "\"\\b\\n\\r\\f\\t\\\\\\\"\""
-        (jsexpr->string "\37\40\177") => "\"\\u001f \\u007f\""
-        (jsexpr->string "λ∀𝄞") => "\"λ∀𝄞\""
-        (jsexpr->string "λ∀𝄞" #:encode 'all)
-        => "\"\\u03bb\\u2200\\ud834\\udd1e\""
-        ;; and that the same holds for keys
-        (jsexpr->string (string->jsexpr "{\"\U0010FFFF\":\"\U0010FFFF\"}"))
-        => "{\"\U0010FFFF\":\"\U0010FFFF\"}"
-        (jsexpr->string #hash[(a . 1) (b . 2)]) => "{\"a\":1,\"b\":2}"
-        (jsexpr->string (hash-copy #hash[(a . 1) (b . 2)])) => "{\"a\":1,\"b\":2}"
-        (jsexpr->string (string->jsexpr "{\"\U0010FFFF\":\"\U0010FFFF\"}")
-                        #:encode 'all)
-        => "{\"\\udbff\\udfff\":\"\\udbff\\udfff\"}"
-        ))
+  ;; test jsexpr?
+  (begin
+    (for ([x (list 0 1 -1 12345 0.0 1.0 #t #f (λ (n) n) "" "abc" "abc\n\\"
+                   '() '(1 2 3) (λ (n) `(1 "2" (3) #t #f ,n)) '((((()))))
+                   '#hasheq()
+                   '#hasheq([x . 1])
+                   '#hasheq([x . 1] [y . 2])
+                   '#hasheq([|x\y| . 1] [y . 2])
+                   ;; string escapes
+                   "λ" "\U1D11E" ; goes as a plain character in normal encoding
+                   "\0" "\1" "\2" "\3" "\37" "\177" ; encoded as json \u escapes
+                   "\b" "\n" "\r" "\f" "\t"         ; same escapes in both
+                   "\a" "\v" "\e"                   ; does not use racket escapes
+                   )])
+      (define (N x null) (if (procedure? x) (x null) x))
+      (test
+       ;; default
+       (string->jsexpr (jsexpr->string (N x 'null)))
+       => (N x 'null)
+       ;; different null
+       (string->jsexpr (jsexpr->string (N x #\null) #:null #\null) #:null #\null)
+       => (N x #\null)
+       ;; encode all non-ascii
+       (string->jsexpr (jsexpr->string (N x 'null) #:encode 'all))
+       => (N x 'null)))
+
+    ;; also test some specific expected encodings
+    (test (jsexpr->string "\0\1\2\3") => "\"\\u0000\\u0001\\u0002\\u0003\""
+          (jsexpr->string "\b\n\r\f\t\\\"") => "\"\\b\\n\\r\\f\\t\\\\\\\"\""
+          (jsexpr->string "\37\40\177") => "\"\\u001f \\u007f\""
+          (jsexpr->string "λ∀𝄞") => "\"λ∀𝄞\""
+          (jsexpr->string "λ∀𝄞" #:encode 'all)
+          => "\"\\u03bb\\u2200\\ud834\\udd1e\""
+          ;; and that the same holds for keys
+          (jsexpr->string (string->jsexpr "{\"\U0010FFFF\":\"\U0010FFFF\"}"))
+          => "{\"\U0010FFFF\":\"\U0010FFFF\"}"
+          (jsexpr->string #hash[(a . 1) (b . 2)]) => "{\"a\":1,\"b\":2}"
+          (jsexpr->string (hash-copy #hash[(a . 1) (b . 2)])) => "{\"a\":1,\"b\":2}"
+          (jsexpr->string (string->jsexpr "{\"\U0010FFFF\":\"\U0010FFFF\"}")
+                          #:encode 'all)
+          => "{\"\\udbff\\udfff\":\"\\udbff\\udfff\"}"
+          ))
+
+  ;; test json
+  (begin
+    (for ([x (list 0 1 -1 12345 0.0 1.0 #t #f (λ (n) n) "" "abc" "abc\n\\"
+                   '() '(1 2 3) (λ (n) `(1 "2" (3) #t #f ,n)) '((((()))))
+                   '#hasheq()
+                   '#hasheq([x . 1])
+                   '#hasheq([x . 1] [y . 2])
+                   '#hasheq([|x\y| . 1] [y . 2])
+                   ;; string escapes
+                   "λ" "\U1D11E" ; goes as a plain character in normal encoding
+                   "\0" "\1" "\2" "\3" "\37" "\177" ; encoded as json \u escapes
+                   "\b" "\n" "\r" "\f" "\t"         ; same escapes in both
+                   "\a" "\v" "\e"                   ; does not use racket escapes
+                   )])
+      (define (N x null) (if (procedure? x) (x null) x))
+      (test
+       ;; JSON-null
+       (string->json (json->string (N x JSON-null)))
+       => (N x JSON-null)
+       ;; encode all non-ascii
+       (string->json (json->string (N x JSON-null) #:encode 'all))
+       => (N x JSON-null)))
+
+    ;; also test some specific expected encodings
+    (test (json->string "\0\1\2\3") => "\"\\u0000\\u0001\\u0002\\u0003\""
+          (json->string "\b\n\r\f\t\\\"") => "\"\\b\\n\\r\\f\\t\\\\\\\"\""
+          (json->string "\37\40\177") => "\"\\u001f \\u007f\""
+          (json->string "λ∀𝄞") => "\"λ∀𝄞\""
+          (json->string "λ∀𝄞" #:encode 'all)
+          => "\"\\u03bb\\u2200\\ud834\\udd1e\""
+          ;; and that the same holds for keys
+          (json->string (string->json "{\"\U0010FFFF\":\"\U0010FFFF\"}"))
+          => "{\"\U0010FFFF\":\"\U0010FFFF\"}"
+          (json->string #hash[(a . 1) (b . 2)]) => "{\"a\":1,\"b\":2}"
+          (json->string (string->json "{\"\U0010FFFF\":\"\U0010FFFF\"}")
+                          #:encode 'all)
+          => "{\"\\udbff\\udfff\":\"\\udbff\\udfff\"}"
+          ))
+  )
 
 (define (parse-tests)
   (test (string->jsexpr @T{  0   }) =>  0
