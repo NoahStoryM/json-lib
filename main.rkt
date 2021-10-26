@@ -238,7 +238,7 @@
         (cond
           [(and (js-inf+? js)
                 ;; eliminate endless loops
-                (not (procedure? (json-inf-)))
+                (not (procedure? (json-inf+)))
                 (not (js-inf+? (json-inf+))))
            (define jsinf+ (json-inf+))
            (parameterize ([json-inf+ undefined])
