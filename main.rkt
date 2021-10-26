@@ -653,8 +653,8 @@
               (read-exponent (* sgn n) (assert (bytes c) expt-mark?) exp)]
              [else (exact->inexact (* sgn n (expt 10 exp)))])))
 
-        (: read-exponent [-> Integer Expt-Mark Integer JS-Number])
         ;; need at least one digit, maybe after +/-:
+        (: read-exponent [-> Integer Expt-Mark Integer JS-Number])
         (define (read-exponent n mark exp)
           (define c (read-byte i))
           (cond
