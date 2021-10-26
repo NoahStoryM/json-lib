@@ -101,10 +101,11 @@
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-])
     (let loop ([x x])
-      (or (or (eq? x (json-inf+)) (js-inf+? x))
-          (or (eq? x (json-inf-)) (js-inf-? x))
-          (or (eq? x (json-null)) (js-null? x))
-          (or (exact-integer? x) (inexact-rational? x))
+      (or (eq? x json-inf+) (eq? x (json-inf+))
+          (eq? x json-inf-) (eq? x (json-inf-))
+          (eq? x json-null) (eq? x (json-null))
+          (js-null? x)
+          (json-number? x)
           (boolean? x)
           (string? x)
           (and (list? x) (andmap loop x))
@@ -758,9 +759,8 @@
     (cond
       [(json-number? js)
        (cond [(or (exact-integer? js) (inexact-rational? js)) js]
-             [(or (eq? js (json-inf+)) (js-inf+? js)) (json-inf+)]
-             [(or (eq? js (json-inf-)) (js-inf-? js)) (json-inf-)]
-             [else (raise-type-error 'json->jsexpr "json?" js)])]
+             [(js-inf+? js) (json-inf+)]
+             [(js-inf-? js) (json-inf-)])]
       [(js-null? js) (json-null)]
       [(boolean? js) js]
       [(string? js) js]
@@ -790,11 +790,11 @@
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-])
     (cond
-      [(or (eq? x (json-inf+)) (js-inf+? x)) JSON-inf+]
-      [(or (eq? x (json-inf-)) (js-inf-? x)) JSON-inf-]
-      [(or (eq? x (json-null)) (js-null? x)) JSON-null]
+      [(or (eq? x json-inf+) (eq? x (json-inf+)) (js-inf+? x)) JSON-inf+]
+      [(or (eq? x json-inf-) (eq? x (json-inf-)) (js-inf-? x)) JSON-inf-]
+      [(or (eq? x json-null) (eq? x (json-null)) (js-null? x)) JSON-null]
       [(boolean? x) x]
-      [(and (json-number? x) (or (exact-integer? x) (inexact-rational? x))) x]
+      [(json-number? x) x]
       [(string? x) x]
       [(list? x) (map jsexpr->json x)]
       [(hash? x)
