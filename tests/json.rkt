@@ -131,7 +131,7 @@
   )
 
 (define (print-tests)
-  ;; test jsexpr?
+  ;; test jsexpr
   (begin
     (for ([x (list 0 1 -1 12345 0.0 1.0 #t #f (λ (n) n) "" "abc" "abc\n\\"
                    '() '(1 2 3) (λ (n) `(1 "2" (3) #t #f ,n)) '((((()))))
@@ -209,251 +209,490 @@
           => "{\"\U0010FFFF\":\"\U0010FFFF\"}"
           (json->string #hash[(a . 1) (b . 2)]) => "{\"a\":1,\"b\":2}"
           (json->string (string->json "{\"\U0010FFFF\":\"\U0010FFFF\"}")
-                          #:encode 'all)
+                        #:encode 'all)
           => "{\"\\udbff\\udfff\":\"\\udbff\\udfff\"}"
           ))
   )
 
 (define (parse-tests)
-  (test (string->jsexpr @T{  0   }) =>  0
-        (string->jsexpr @T{  0x  }) =>  0 ; not clearly a good idea, but preserve old behavior
-        (string->jsexpr @T{  1   }) =>  1
-        (string->jsexpr @T{ -1   }) => -1 ; note: `+' is forbidden
-        (string->jsexpr @T{ -12  }) => -12
-        (string->jsexpr @T{ -123 }) => -123
-        (string->jsexpr @T{  1.0 }) =>  1.0
-        (string->jsexpr @T{  1.3 }) =>  1.3
-        (string->jsexpr @T{  1.34}) =>  1.34
-        (string->jsexpr @T{ -1.0 }) => -1.0
-        (string->jsexpr @T{ -1.3 }) => -1.3
-        (string->jsexpr @T{-10.34}) => -10.34
-        (string->jsexpr @T{-10.34e3}) => -10340.0
-        (string->jsexpr @T{-10.34e03}) => -10340.0
-        (string->jsexpr @T{-10.34e+3}) => -10340.0
-        (string->jsexpr @T{-10.34e+03}) => -10340.0
-        (string->jsexpr @T{-10.34e+0x}) => -10.340 ; preserve old behavior
-        (string->jsexpr @T{-10.34e-3}) => -1.034e-2
-        (string->jsexpr @T{-10.34e-03}) => -1.034e-2
-        (string->jsexpr @T{-10.34e+31}) => -1.034e32
-        (string->jsexpr @T{ 1e9999999999999999    }) => +inf.0 ; breaks contract
-        (string->jsexpr @T{ 1.0e9999999999999999  }) => +inf.0
-        (string->jsexpr @T{-1e9999999999999999    }) => -inf.0
-        (string->jsexpr @T{-1.0e9999999999999999  }) => -inf.0
-        (string->jsexpr @T{ 1e-9999999999999999   }) =>  0.0
-        (string->jsexpr @T{-1e-9999999999999999   }) => -0.0
-        (string->jsexpr @T{ 0e9999999999999999    }) => 0.0
-        (string->jsexpr @T{ 0e-9999999999999999   }) => 0.0
-        (string->jsexpr @T{ 0.001e310 }) => 1.0e307
-        (string->jsexpr @T{ 100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e-402 }) => 1e-292
-        (string->jsexpr @T{ true  }) => #t
-        (string->jsexpr @T{ false }) => #f
-        (string->jsexpr @T{ null  }) => 'null
-        (string->jsexpr @T{ ""    }) => ""
-        (string->jsexpr @T{ "abc" }) => "abc"
-        (string->jsexpr @T{ [] }) => '()
-        (string->jsexpr @T{ [1,[2],3] }) => '(1 (2) 3)
-        (string->jsexpr @T{ [ 1 , [ 2 ] , 3 ] }) => '(1 (2) 3)
-        (string->jsexpr @T{ [true, false, null] }) => '(#t #f null)
-        (immutable? (string->jsexpr @T{ {} }))
-        (immutable? (string->jsexpr @T{ {"x":1} }))
-        (immutable? (string->jsexpr @T{ {"x":1,"y":2} }))
-        (string->jsexpr @T{ {} }) => '#hasheq()
-        (string->jsexpr @T{ {"x":1} }) => '#hasheq([x . 1])
-        (string->jsexpr @T{ {"x":1,"y":2} }) => '#hasheq([x . 1] [y . 2])
-        (string->jsexpr @T{ [{"x": 1}, {"y": 2}] }) =>
-        '(#hasheq([x . 1]) #hasheq([y . 2]))
+  ;; test jsexpr
+  (begin
+    (test (string->jsexpr @T{  0   }) =>  0
+          (string->jsexpr @T{  0x  }) =>  0 ; not clearly a good idea, but preserve old behavior
+          (string->jsexpr @T{  1   }) =>  1
+          (string->jsexpr @T{ -1   }) => -1 ; note: `+' is forbidden
+          (string->jsexpr @T{ -12  }) => -12
+          (string->jsexpr @T{ -123 }) => -123
+          (string->jsexpr @T{  1.0 }) =>  1.0
+          (string->jsexpr @T{  1.3 }) =>  1.3
+          (string->jsexpr @T{  1.34}) =>  1.34
+          (string->jsexpr @T{ -1.0 }) => -1.0
+          (string->jsexpr @T{ -1.3 }) => -1.3
+          (string->jsexpr @T{-10.34}) => -10.34
+          (string->jsexpr @T{-10.34e3}) => -10340.0
+          (string->jsexpr @T{-10.34e03}) => -10340.0
+          (string->jsexpr @T{-10.34e+3}) => -10340.0
+          (string->jsexpr @T{-10.34e+03}) => -10340.0
+          (string->jsexpr @T{-10.34e+0x}) => -10.340 ; preserve old behavior
+          (string->jsexpr @T{-10.34e-3}) => -1.034e-2
+          (string->jsexpr @T{-10.34e-03}) => -1.034e-2
+          (string->jsexpr @T{-10.34e+31}) => -1.034e32
+          (string->jsexpr @T{ 1e9999999999999999    }) => +inf.0 ; breaks contract
+          (string->jsexpr @T{ 1.0e9999999999999999  }) => +inf.0
+          (string->jsexpr @T{-1e9999999999999999    }) => -inf.0
+          (string->jsexpr @T{-1.0e9999999999999999  }) => -inf.0
+          (string->jsexpr @T{ 1e-9999999999999999   }) =>  0.0
+          (string->jsexpr @T{-1e-9999999999999999   }) => -0.0
+          (string->jsexpr @T{ 0e9999999999999999    }) => 0.0
+          (string->jsexpr @T{ 0e-9999999999999999   }) => 0.0
+          (string->jsexpr @T{ 0.001e310 }) => 1.0e307
+          (string->jsexpr @T{ 100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e-402 }) => 1e-292
+          (string->jsexpr @T{ true  }) => #t
+          (string->jsexpr @T{ false }) => #f
+          (string->jsexpr @T{ null  }) => 'null
+          (string->jsexpr @T{ ""    }) => ""
+          (string->jsexpr @T{ "abc" }) => "abc"
+          (string->jsexpr @T{ [] }) => '()
+          (string->jsexpr @T{ [1,[2],3] }) => '(1 (2) 3)
+          (string->jsexpr @T{ [ 1 , [ 2 ] , 3 ] }) => '(1 (2) 3)
+          (string->jsexpr @T{ [true, false, null] }) => '(#t #f null)
+          (immutable? (string->jsexpr @T{ {} }))
+          (immutable? (string->jsexpr @T{ {"x":1} }))
+          (immutable? (string->jsexpr @T{ {"x":1,"y":2} }))
+          (string->jsexpr @T{ {} }) => '#hasheq()
+          (string->jsexpr @T{ {"x":1} }) => '#hasheq([x . 1])
+          (string->jsexpr @T{ {"x":1,"y":2} }) => '#hasheq([x . 1] [y . 2])
+          (string->jsexpr @T{ [{"x": 1}, {"y": 2}] }) =>
+          '(#hasheq([x . 1]) #hasheq([y . 2]))
 
-        ;; string escapes
-        (string->jsexpr @T{ " \b\n\r\f\t\\\"\/ " }) => " \b\n\r\f\t\\\"/ "
-        (string->jsexpr @T{ "\uD834\uDD1E" }) => "\U1D11E"
-        (string->jsexpr @T{ "\ud834\udd1e" }) => "\U1d11e"
-        ;; INPUT PORT is optional
-        (with-input-from-string "[]" read-jsexpr)
-        => (parameterize ((json-null '())) (json-null))
-        ;; EOF detection
-        (for/list ([je (in-port read-jsexpr
-                                (open-input-string
-                                 @T{ 1 [2,3] "four" }))])
-          je)
-        => '(1 (2 3) "four")
-        (string->jsexpr "]") =error> "string->jsexpr:"
-        (string->jsexpr "foo") =error> "string->jsexpr:"
-        (string->jsexpr "") => eof
-        (string->jsexpr " \t\r\n") => eof
+          ;; string escapes
+          (string->jsexpr @T{ " \b\n\r\f\t\\\"\/ " }) => " \b\n\r\f\t\\\"/ "
+          (string->jsexpr @T{ "\uD834\uDD1E" }) => "\U1D11E"
+          (string->jsexpr @T{ "\ud834\udd1e" }) => "\U1d11e"
+          ;; INPUT PORT is optional
+          (with-input-from-string "[]" read-jsexpr)
+          => (parameterize ((json-null '())) (json-null))
+          ;; EOF detection
+          (for/list ([je (in-port read-jsexpr
+                                  (open-input-string
+                                   @T{ 1 [2,3] "four" }))])
+            je)
+          => '(1 (2 3) "four")
+          (string->jsexpr "]") =error> "string->jsexpr:"
+          (string->jsexpr "foo") =error> "string->jsexpr:"
+          (string->jsexpr "") => eof
+          (string->jsexpr " \t\r\n") => eof
 
-        ;; Invalid UTF-8 input.
-        (bytes->jsexpr #"\"\377\377\377\"") =error> exn:fail?
+          ;; Invalid UTF-8 input.
+          (bytes->jsexpr #"\"\377\377\377\"") =error> exn:fail?
 
-        ;; whitespace should be only the four allowed charactes
-        (string->jsexpr (string-append
+          ;; whitespace should be only the four allowed charactes
+          (string->jsexpr (string-append
+                           "{ \"x\" :"
+                           (string #\u00A0)
+                           " 123 }"))
+          =error>
+          #rx"whitespace that is not allowed"
+          (string->jsexpr (string-append
+                           "[ 1,"
+                           (string #\u00A0)
+                           " 2 ]"))
+          =error>
+          #rx"whitespace that is not allowed"
+
+          ;; More string escapes:
+          (string->jsexpr @T{ "hel\"lo" }) => "hel\"lo"
+          (string->jsexpr @T{ "\\//\\\\//" }) => "\\//\\\\//"
+          (string->jsexpr @T{ ["one", "t\\w\\o", 3] }) => '("one" "t\\w\\o" 3)
+          (string->jsexpr @T{ "\u000A" }) => "\u000A"
+          (string->jsexpr @T{ "/" }) => "/"
+          (string->jsexpr @T{ "\/" }) => "/"
+          ;; More error tests:
+          (string->jsexpr @T{ -}) =error> #rx"string->jsexpr:.*-"
+          (string->jsexpr @T{ -x}) =error> #rx"string->jsexpr:.*-x"
+          (string->jsexpr @T{ 1.}) =error> #rx"string->jsexpr:.*1[.]"
+          (string->jsexpr @T{ 1.x }) =error> #rx"string->jsexpr:.*1[.]x"
+          (string->jsexpr @T{ -1.}) =error> #rx"string->jsexpr:.*-1[.]"
+          (string->jsexpr @T{ -1.x }) =error> #rx"string->jsexpr:.*-1[.]x"
+          (string->jsexpr @T{ -13e }) =error> #rx"string->jsexpr:.*-13e"
+          (string->jsexpr @T{ -1.3e }) =error> #rx"string->jsexpr:.*-1[.]3e"
+          (string->jsexpr @T{ -1.3ex}) =error> #rx"string->jsexpr:.*-1[.]3e"
+          (string->jsexpr @T{ 10.3ex}) =error> #rx"string->jsexpr:.*10[.]3e"
+          (string->jsexpr @T{ [00] }) =error> "string->jsexpr:"
+          (string->jsexpr @T{ [1,2,,3] }) =error> "string->jsexpr:"
+          (string->jsexpr @T{ [1,2,3,] }) =error> "string->jsexpr:"
+          (string->jsexpr @T{ {42 : "bad-key!"} }) =error> "string->jsexpr:"
+          (string->jsexpr @T{ {'no-colon' , ""} }) =error> "string->jsexpr:"
+          (string->jsexpr @T{ {"x":1,,"y":2} }) =error> "string->jsexpr:"
+          (string->jsexpr @T{ {x:1, y:2} }) =error> "string->jsexpr:"
+          (string->jsexpr " {x:1, y:2] ") =error> "string->jsexpr:"
+          (string->jsexpr " [\"x\",1, \"y\",2} ") =error> "string->jsexpr:"
+          (string->jsexpr @T{ truelove }) =error> "string->jsexpr:"
+          (string->jsexpr @T{ truebred }) =error> "string->jsexpr:"
+          (string->jsexpr @T{ truea }) =error> "string->jsexpr:"
+          (string->jsexpr @T{ falsehood }) =error> "string->jsexpr:"
+          (string->jsexpr @T{ falsetto }) =error> "string->jsexpr:"
+          (string->jsexpr @T{ nullity }) =error> "string->jsexpr:"
+          (string->jsexpr @T{ nulliparous }) =error> "string->jsexpr:"
+
+
+          ;; test cases to see if the trailing eof is consumed -- the rule
+          ;; used to formulate these test cases is that an eof should be
+          ;; consumed if and only if
+          ;;  - eof is the entire thing in the stream (and thus it is returned), or
+          ;;  - the eof triggered an error (ie the json object isn't complete)
+          (let ([p (port-with-particulars (list #"1" eof #"a"))])
+            (list (read-jsexpr p)
+                  (flush-data p)))
+          => (list 1 (list eof 97))
+
+          (let ([p (port-with-particulars (list eof #"a"))])
+            (list (read-jsexpr p)
+                  (flush-data p)))
+          =>
+          (list eof (list 97))
+
+          (let ([p (port-with-particulars (list eof eof #"a"))])
+            (list (read-jsexpr p)
+                  (flush-data p)))
+          =>
+          (list eof (list eof 97))
+
+          (let ([p (port-with-particulars (list eof eof #"a"))])
+            (list (read-jsexpr p)
+                  (read-jsexpr p)
+                  (flush-data p)))
+          =>
+          (list eof eof (list 97))
+
+          (let ([p (port-with-particulars (list #"\"1\"" eof eof #"a"))])
+            (list (read-jsexpr p)
+                  (flush-data p)))
+          => (list "1" (list eof eof 97))
+
+          (let ([p (port-with-particulars (list #"\"1" eof eof #"a"))])
+            (list (read-jsexpr/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
+
+          (let ([p (port-with-particulars (list #"[1, 2]" eof eof #"a"))])
+            (list (read-jsexpr p)
+                  (flush-data p)))
+          => (list (list 1 2) (list eof eof 97))
+
+          (let ([p (port-with-particulars (list #"[1, 2" eof eof #"a"))])
+            (list (read-jsexpr/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
+
+          (let ([p (port-with-particulars (list #"[1," eof eof #"a"))])
+            (list (read-jsexpr/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
+
+          (let ([p (port-with-particulars (list #"{ \"x\":  11 }" eof eof #"a"))])
+            (list (read-jsexpr p)
+                  (flush-data p)))
+          => (list (hasheq 'x 11) (list eof eof 97))
+
+          (let ([p (port-with-particulars (list #"{ \"x\":  11 " eof eof #"a"))])
+            (list (read-jsexpr/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
+
+          (let ([p (port-with-particulars (list #"{ \"x\" " eof eof #"a"))])
+            (list (read-jsexpr/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
+
+          (let ([p (port-with-particulars (list #"{ \"x\" : " eof eof #"a"))])
+            (list (read-jsexpr/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
+
+          (let ([p (port-with-particulars (list #"{  " eof eof #"a"))])
+            (list (read-jsexpr/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
+
+          (let ([p (port-with-particulars (list #"{" eof eof #"a"))])
+            (list (read-jsexpr/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
+
+          (let ([p (port-with-particulars (list #"true" eof eof #"a"))])
+            (list (read-jsexpr p)
+                  (flush-data p)))
+          => (list #t (list eof eof 97))
+
+          (let ([p (port-with-particulars (list #"false" eof eof #"a"))])
+            (list (read-jsexpr p)
+                  (flush-data p)))
+          => (list #f (list eof eof 97))
+
+          (let ([p (port-with-particulars (list #"null" eof eof #"a"))])
+            (list (read-jsexpr p)
+                  (flush-data p)))
+          => (list 'null (list eof eof 97))
+
+          ;; tests to make sure read-jsexpr doesn't hang when the
+          ;; input is already enough to be sure we're doomed
+          (read-jsexpr (port-with-particulars #"started"))
+          =error> #rx"read-jsexpr: bad input starting #\"started\""
+
+          (read-jsexpr (port-with-particulars #"try"))
+          =error> #rx"read-jsexpr: bad input starting #\"try\""
+
+          (read-jsexpr (port-with-particulars #"falz"))
+          =error> #rx"read-jsexpr: bad input starting #\"falz\""
+
+          (read-jsexpr (port-with-particulars #"noll"))
+          =error> #rx"read-jsexpr: bad input starting #\"noll\""
+
+          )
+
+    ;; test `jsexpr-mutable?'
+    (parameterize ([jsexpr-mutable? #t])
+      (test (not (immutable? (string->jsexpr @T{ {} })))
+            (not (immutable? (string->jsexpr @T{ {"x":1} })))
+            (not (immutable? (string->jsexpr @T{ {"x":1,"y":2} }))))))
+
+  ;; test json
+  (begin
+    (test (string->json @T{  0   }) =>  0
+          (string->json @T{  0x  }) =>  0 ; not clearly a good idea, but preserve old behavior
+          (string->json @T{  1   }) =>  1
+          (string->json @T{ -1   }) => -1 ; note: `+' is forbidden
+          (string->json @T{ -12  }) => -12
+          (string->json @T{ -123 }) => -123
+          (string->json @T{  1.0 }) =>  1.0
+          (string->json @T{  1.3 }) =>  1.3
+          (string->json @T{  1.34}) =>  1.34
+          (string->json @T{ -1.0 }) => -1.0
+          (string->json @T{ -1.3 }) => -1.3
+          (string->json @T{-10.34}) => -10.34
+          (string->json @T{-10.34e3}) => -10340.0
+          (string->json @T{-10.34e03}) => -10340.0
+          (string->json @T{-10.34e+3}) => -10340.0
+          (string->json @T{-10.34e+03}) => -10340.0
+          (string->json @T{-10.34e+0x}) => -10.340 ; preserve old behavior
+          (string->json @T{-10.34e-3}) => -1.034e-2
+          (string->json @T{-10.34e-03}) => -1.034e-2
+          (string->json @T{-10.34e+31}) => -1.034e32
+          (string->json @T{ 1e9999999999999999    }) => JSON-inf+
+          (string->json @T{ 1.0e9999999999999999  }) => JSON-inf+
+          (string->json @T{-1e9999999999999999    }) => JSON-inf-
+          (string->json @T{-1.0e9999999999999999  }) => JSON-inf-
+          (string->json @T{ 1e-9999999999999999   }) =>  0.0
+          (string->json @T{-1e-9999999999999999   }) => -0.0
+          (string->json @T{ 0e9999999999999999    }) => 0.0
+          (string->json @T{ 0e-9999999999999999   }) => 0.0
+          (string->json @T{ 0.001e310 }) => 1.0e307
+          (string->json @T{ 100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e-402 }) => 1e-292
+          (string->json @T{ true  }) => #t
+          (string->json @T{ false }) => #f
+          (string->json @T{ null  }) => JSON-null
+          (string->json @T{ ""    }) => ""
+          (string->json @T{ "abc" }) => "abc"
+          (string->json @T{ [] }) => '()
+          (string->json @T{ [1,[2],3] }) => '(1 (2) 3)
+          (string->json @T{ [ 1 , [ 2 ] , 3 ] }) => '(1 (2) 3)
+          (string->json @T{ [true, false, null] }) => `(#t #f ,JSON-null)
+          (immutable? (string->json @T{ {} }))
+          (immutable? (string->json @T{ {"x":1} }))
+          (immutable? (string->json @T{ {"x":1,"y":2} }))
+          (string->json @T{ {} }) => '#hasheq()
+          (string->json @T{ {"x":1} }) => '#hasheq([x . 1])
+          (string->json @T{ {"x":1,"y":2} }) => '#hasheq([x . 1] [y . 2])
+          (string->json @T{ [{"x": 1}, {"y": 2}] }) =>
+          '(#hasheq([x . 1]) #hasheq([y . 2]))
+
+          ;; string escapes
+          (string->json @T{ " \b\n\r\f\t\\\"\/ " }) => " \b\n\r\f\t\\\"/ "
+          (string->json @T{ "\uD834\uDD1E" }) => "\U1D11E"
+          (string->json @T{ "\ud834\udd1e" }) => "\U1d11e"
+          ;; INPUT PORT is optional
+          (with-input-from-string "[]" read-JSON)
+          => (parameterize ((json-null '())) (json-null))
+          ;; EOF detection
+          (for/list ([je (in-port read-JSON
+                                  (open-input-string
+                                   @T{ 1 [2,3] "four" }))])
+            je)
+          => '(1 (2 3) "four")
+          (string->json "]") =error> "string->json:"
+          (string->json "foo") =error> "string->json:"
+          (string->json "") => eof
+          (string->json " \t\r\n") => eof
+
+          ;; Invalid UTF-8 input.
+          (bytes->json #"\"\377\377\377\"") =error> exn:fail?
+
+          ;; whitespace should be only the four allowed charactes
+          (string->json (string-append
                          "{ \"x\" :"
                          (string #\u00A0)
                          " 123 }"))
-        =error>
-        #rx"whitespace that is not allowed"
-        (string->jsexpr (string-append
+          =error>
+          #rx"whitespace that is not allowed"
+          (string->json (string-append
                          "[ 1,"
                          (string #\u00A0)
                          " 2 ]"))
-        =error>
-        #rx"whitespace that is not allowed"
+          =error>
+          #rx"whitespace that is not allowed"
 
-        ;; More string escapes:
-        (string->jsexpr @T{ "hel\"lo" }) => "hel\"lo"
-        (string->jsexpr @T{ "\\//\\\\//" }) => "\\//\\\\//"
-        (string->jsexpr @T{ ["one", "t\\w\\o", 3] }) => '("one" "t\\w\\o" 3)
-        (string->jsexpr @T{ "\u000A" }) => "\u000A"
-        (string->jsexpr @T{ "/" }) => "/"
-        (string->jsexpr @T{ "\/" }) => "/"
-        ;; More error tests:
-        (string->jsexpr @T{ -}) =error> #rx"string->jsexpr:.*-"
-        (string->jsexpr @T{ -x}) =error> #rx"string->jsexpr:.*-x"
-        (string->jsexpr @T{ 1.}) =error> #rx"string->jsexpr:.*1[.]"
-        (string->jsexpr @T{ 1.x }) =error> #rx"string->jsexpr:.*1[.]x"
-        (string->jsexpr @T{ -1.}) =error> #rx"string->jsexpr:.*-1[.]"
-        (string->jsexpr @T{ -1.x }) =error> #rx"string->jsexpr:.*-1[.]x"
-        (string->jsexpr @T{ -13e }) =error> #rx"string->jsexpr:.*-13e"
-        (string->jsexpr @T{ -1.3e }) =error> #rx"string->jsexpr:.*-1[.]3e"
-        (string->jsexpr @T{ -1.3ex}) =error> #rx"string->jsexpr:.*-1[.]3e"
-        (string->jsexpr @T{ 10.3ex}) =error> #rx"string->jsexpr:.*10[.]3e"
-        (string->jsexpr @T{ [00] }) =error> "string->jsexpr:"
-        (string->jsexpr @T{ [1,2,,3] }) =error> "string->jsexpr:"
-        (string->jsexpr @T{ [1,2,3,] }) =error> "string->jsexpr:"
-        (string->jsexpr @T{ {42 : "bad-key!"} }) =error> "string->jsexpr:"
-        (string->jsexpr @T{ {'no-colon' , ""} }) =error> "string->jsexpr:"
-        (string->jsexpr @T{ {"x":1,,"y":2} }) =error> "string->jsexpr:"
-        (string->jsexpr @T{ {x:1, y:2} }) =error> "string->jsexpr:"
-        (string->jsexpr " {x:1, y:2] ") =error> "string->jsexpr:"
-        (string->jsexpr " [\"x\",1, \"y\",2} ") =error> "string->jsexpr:"
-        (string->jsexpr @T{ truelove }) =error> "string->jsexpr:"
-        (string->jsexpr @T{ truebred }) =error> "string->jsexpr:"
-        (string->jsexpr @T{ truea }) =error> "string->jsexpr:"
-        (string->jsexpr @T{ falsehood }) =error> "string->jsexpr:"
-        (string->jsexpr @T{ falsetto }) =error> "string->jsexpr:"
-        (string->jsexpr @T{ nullity }) =error> "string->jsexpr:"
-        (string->jsexpr @T{ nulliparous }) =error> "string->jsexpr:"
+          ;; More string escapes:
+          (string->json @T{ "hel\"lo" }) => "hel\"lo"
+          (string->json @T{ "\\//\\\\//" }) => "\\//\\\\//"
+          (string->json @T{ ["one", "t\\w\\o", 3] }) => '("one" "t\\w\\o" 3)
+          (string->json @T{ "\u000A" }) => "\u000A"
+          (string->json @T{ "/" }) => "/"
+          (string->json @T{ "\/" }) => "/"
+          ;; More error tests:
+          (string->json @T{ -}) =error> #rx"string->json:.*-"
+          (string->json @T{ -x}) =error> #rx"string->json:.*-x"
+          (string->json @T{ 1.}) =error> #rx"string->json:.*1[.]"
+          (string->json @T{ 1.x }) =error> #rx"string->json:.*1[.]x"
+          (string->json @T{ -1.}) =error> #rx"string->json:.*-1[.]"
+          (string->json @T{ -1.x }) =error> #rx"string->json:.*-1[.]x"
+          (string->json @T{ -13e }) =error> #rx"string->json:.*-13e"
+          (string->json @T{ -1.3e }) =error> #rx"string->json:.*-1[.]3e"
+          (string->json @T{ -1.3ex}) =error> #rx"string->json:.*-1[.]3e"
+          (string->json @T{ 10.3ex}) =error> #rx"string->json:.*10[.]3e"
+          (string->json @T{ [00] }) =error> "string->json:"
+          (string->json @T{ [1,2,,3] }) =error> "string->json:"
+          (string->json @T{ [1,2,3,] }) =error> "string->json:"
+          (string->json @T{ {42 : "bad-key!"} }) =error> "string->json:"
+          (string->json @T{ {'no-colon' , ""} }) =error> "string->json:"
+          (string->json @T{ {"x":1,,"y":2} }) =error> "string->json:"
+          (string->json @T{ {x:1, y:2} }) =error> "string->json:"
+          (string->json " {x:1, y:2] ") =error> "string->json:"
+          (string->json " [\"x\",1, \"y\",2} ") =error> "string->json:"
+          (string->json @T{ truelove }) =error> "string->json:"
+          (string->json @T{ truebred }) =error> "string->json:"
+          (string->json @T{ truea }) =error> "string->json:"
+          (string->json @T{ falsehood }) =error> "string->json:"
+          (string->json @T{ falsetto }) =error> "string->json:"
+          (string->json @T{ nullity }) =error> "string->json:"
+          (string->json @T{ nulliparous }) =error> "string->json:"
 
 
-        ;; test cases to see if the trailing eof is consumed -- the rule
-        ;; used to formulate these test cases is that an eof should be
-        ;; consumed if and only if
-        ;;  - eof is the entire thing in the stream (and thus it is returned), or
-        ;;  - the eof triggered an error (ie the json object isn't complete)
-        (let ([p (port-with-particulars (list #"1" eof #"a"))])
-          (list (read-jsexpr p)
-                (flush-data p)))
-        => (list 1 (list eof 97))
+          ;; test cases to see if the trailing eof is consumed -- the rule
+          ;; used to formulate these test cases is that an eof should be
+          ;; consumed if and only if
+          ;;  - eof is the entire thing in the stream (and thus it is returned), or
+          ;;  - the eof triggered an error (ie the json object isn't complete)
+          (let ([p (port-with-particulars (list #"1" eof #"a"))])
+            (list (read-JSON p)
+                  (flush-data p)))
+          => (list 1 (list eof 97))
 
-        (let ([p (port-with-particulars (list eof #"a"))])
-          (list (read-jsexpr p)
-                (flush-data p)))
-        =>
-        (list eof (list 97))
+          (let ([p (port-with-particulars (list eof #"a"))])
+            (list (read-JSON p)
+                  (flush-data p)))
+          =>
+          (list eof (list 97))
 
-        (let ([p (port-with-particulars (list eof eof #"a"))])
-          (list (read-jsexpr p)
-                (flush-data p)))
-        =>
-        (list eof (list eof 97))
+          (let ([p (port-with-particulars (list eof eof #"a"))])
+            (list (read-JSON p)
+                  (flush-data p)))
+          =>
+          (list eof (list eof 97))
 
-        (let ([p (port-with-particulars (list eof eof #"a"))])
-          (list (read-jsexpr p)
-                (read-jsexpr p)
-                (flush-data p)))
-        =>
-        (list eof eof (list 97))
+          (let ([p (port-with-particulars (list eof eof #"a"))])
+            (list (read-JSON p)
+                  (read-JSON p)
+                  (flush-data p)))
+          =>
+          (list eof eof (list 97))
 
-        (let ([p (port-with-particulars (list #"\"1\"" eof eof #"a"))])
-          (list (read-jsexpr p)
-                (flush-data p)))
-        => (list "1" (list eof eof 97))
+          (let ([p (port-with-particulars (list #"\"1\"" eof eof #"a"))])
+            (list (read-JSON p)
+                  (flush-data p)))
+          => (list "1" (list eof eof 97))
 
-        (let ([p (port-with-particulars (list #"\"1" eof eof #"a"))])
-          (list (read-jsexpr/swallow-error p)
-                (flush-data p)))
-        => (list 'exn (list eof 97))
+          (let ([p (port-with-particulars (list #"\"1" eof eof #"a"))])
+            (list (read-JSON/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
 
-        (let ([p (port-with-particulars (list #"[1, 2]" eof eof #"a"))])
-          (list (read-jsexpr p)
-                (flush-data p)))
-        => (list (list 1 2) (list eof eof 97))
+          (let ([p (port-with-particulars (list #"[1, 2]" eof eof #"a"))])
+            (list (read-JSON p)
+                  (flush-data p)))
+          => (list (list 1 2) (list eof eof 97))
 
-        (let ([p (port-with-particulars (list #"[1, 2" eof eof #"a"))])
-          (list (read-jsexpr/swallow-error p)
-                (flush-data p)))
-        => (list 'exn (list eof 97))
+          (let ([p (port-with-particulars (list #"[1, 2" eof eof #"a"))])
+            (list (read-JSON/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
 
-        (let ([p (port-with-particulars (list #"[1," eof eof #"a"))])
-          (list (read-jsexpr/swallow-error p)
-                (flush-data p)))
-        => (list 'exn (list eof 97))
+          (let ([p (port-with-particulars (list #"[1," eof eof #"a"))])
+            (list (read-JSON/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
 
-        (let ([p (port-with-particulars (list #"{ \"x\":  11 }" eof eof #"a"))])
-          (list (read-jsexpr p)
-                (flush-data p)))
-        => (list (hasheq 'x 11) (list eof eof 97))
+          (let ([p (port-with-particulars (list #"{ \"x\":  11 }" eof eof #"a"))])
+            (list (read-JSON p)
+                  (flush-data p)))
+          => (list (hasheq 'x 11) (list eof eof 97))
 
-        (let ([p (port-with-particulars (list #"{ \"x\":  11 " eof eof #"a"))])
-          (list (read-jsexpr/swallow-error p)
-                (flush-data p)))
-        => (list 'exn (list eof 97))
+          (let ([p (port-with-particulars (list #"{ \"x\":  11 " eof eof #"a"))])
+            (list (read-JSON/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
 
-        (let ([p (port-with-particulars (list #"{ \"x\" " eof eof #"a"))])
-          (list (read-jsexpr/swallow-error p)
-                (flush-data p)))
-        => (list 'exn (list eof 97))
+          (let ([p (port-with-particulars (list #"{ \"x\" " eof eof #"a"))])
+            (list (read-JSON/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
 
-        (let ([p (port-with-particulars (list #"{ \"x\" : " eof eof #"a"))])
-          (list (read-jsexpr/swallow-error p)
-                (flush-data p)))
-        => (list 'exn (list eof 97))
+          (let ([p (port-with-particulars (list #"{ \"x\" : " eof eof #"a"))])
+            (list (read-JSON/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
 
-        (let ([p (port-with-particulars (list #"{  " eof eof #"a"))])
-          (list (read-jsexpr/swallow-error p)
-                (flush-data p)))
-        => (list 'exn (list eof 97))
+          (let ([p (port-with-particulars (list #"{  " eof eof #"a"))])
+            (list (read-JSON/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
 
-        (let ([p (port-with-particulars (list #"{" eof eof #"a"))])
-          (list (read-jsexpr/swallow-error p)
-                (flush-data p)))
-        => (list 'exn (list eof 97))
+          (let ([p (port-with-particulars (list #"{" eof eof #"a"))])
+            (list (read-JSON/swallow-error p)
+                  (flush-data p)))
+          => (list 'exn (list eof 97))
 
-        (let ([p (port-with-particulars (list #"true" eof eof #"a"))])
-          (list (read-jsexpr p)
-                (flush-data p)))
-        => (list #t (list eof eof 97))
+          (let ([p (port-with-particulars (list #"true" eof eof #"a"))])
+            (list (read-JSON p)
+                  (flush-data p)))
+          => (list #t (list eof eof 97))
 
-        (let ([p (port-with-particulars (list #"false" eof eof #"a"))])
-          (list (read-jsexpr p)
-                (flush-data p)))
-        => (list #f (list eof eof 97))
+          (let ([p (port-with-particulars (list #"false" eof eof #"a"))])
+            (list (read-JSON p)
+                  (flush-data p)))
+          => (list #f (list eof eof 97))
 
-        (let ([p (port-with-particulars (list #"null" eof eof #"a"))])
-          (list (read-jsexpr p)
-                (flush-data p)))
-        => (list 'null (list eof eof 97))
+          (let ([p (port-with-particulars (list #"null" eof eof #"a"))])
+            (list (read-JSON p)
+                  (flush-data p)))
+          => (list JSON-null (list eof eof 97))
 
-        ;; tests to make sure read-jsexpr doesn't hang when the
-        ;; input is already enough to be sure we're doomed
-        (read-jsexpr (port-with-particulars #"started"))
-        =error> #rx"read-jsexpr: bad input starting #\"started\""
+          ;; tests to make sure read-JSON doesn't hang when the
+          ;; input is already enough to be sure we're doomed
+          (read-JSON (port-with-particulars #"started"))
+          =error> #rx"read-JSON: bad input starting #\"started\""
 
-        (read-jsexpr (port-with-particulars #"try"))
-        =error> #rx"read-jsexpr: bad input starting #\"try\""
+          (read-JSON (port-with-particulars #"try"))
+          =error> #rx"read-JSON: bad input starting #\"try\""
 
-        (read-jsexpr (port-with-particulars #"falz"))
-        =error> #rx"read-jsexpr: bad input starting #\"falz\""
+          (read-JSON (port-with-particulars #"falz"))
+          =error> #rx"read-JSON: bad input starting #\"falz\""
 
-        (read-jsexpr (port-with-particulars #"noll"))
-        =error> #rx"read-jsexpr: bad input starting #\"noll\""
+          (read-JSON (port-with-particulars #"noll"))
+          =error> #rx"read-JSON: bad input starting #\"noll\""
 
-        )
-
-  ;; test `jsexpr-mutable?'
-  (parameterize ([jsexpr-mutable? #t])
-    (test (not (immutable? (string->jsexpr @T{ {} })))
-          (not (immutable? (string->jsexpr @T{ {"x":1} })))
-          (not (immutable? (string->jsexpr @T{ {"x":1,"y":2} }))))))
+          ))
+  )
 
 (module port-with-particulars racket/base
   (require tests/eli-tester racket/contract)
@@ -653,6 +892,13 @@
           b)
         =>
         #"abc\0\0"))
+
+(define (read-JSON/swallow-error p)
+  (with-handlers ([(λ (x) (and (exn:fail:read? x)
+                                (regexp-match #rx"^[^\n]*read-JSON:" (exn-message x))))
+                   (λ (x) 'exn)])
+    (read-JSON p)
+    (error 'read-JSON/swallow-error "did not raise an error")))
 
 (define (read-jsexpr/swallow-error p)
   (with-handlers ([(λ (x) (and (exn:fail:read? x)
