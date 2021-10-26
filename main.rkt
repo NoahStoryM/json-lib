@@ -767,6 +767,7 @@
       [(json-object? js)
        (cond
          [mutable?
+          (: result (Mutable-HashTable Symbol JSExpr))
           (define result (make-hasheq))
           (for ([(k v) (in-hash js)])
             (hash-set! result k v))
