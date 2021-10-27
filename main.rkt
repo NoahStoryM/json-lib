@@ -870,14 +870,14 @@
                        #:null JSExpr
                        #:inf+ JSExpr
                        #:inf- JSExpr
-                       #:encode  Encode)
+                       #:encode Encode)
                       Bytes])
 (define (jsexpr->bytes x
                        [who 'jsexpr->bytes]
                        #:null [jsnull (json-null)]
                        #:inf+ [jsinf+ (json-inf+)]
                        #:inf- [jsinf- (json-inf-)]
-                       #:encode  [enc 'control])
+                       #:encode [enc 'control])
   (parameterize ([json-null jsnull]
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-])
