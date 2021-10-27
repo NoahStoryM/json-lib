@@ -180,10 +180,12 @@
   (parameterize ([json-inf+ "+inf"]
                  [json-inf- "-inf"])
     (test (json->string JSON-inf+) => "\"+inf\""
+          (jsexpr->string JSON-inf+) => "\"+inf\""
           (jsexpr->string json-inf+) => "\"+inf\""
           (jsexpr->string (json-inf+)) => "\"+inf\""
 
           (json->string JSON-inf-) => "\"-inf\""
+          (jsexpr->string JSON-inf-) => "\"-inf\""
           (jsexpr->string json-inf-) => "\"-inf\""
           (jsexpr->string (json-inf-)) => "\"-inf\""))
 
