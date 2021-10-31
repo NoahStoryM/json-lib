@@ -671,7 +671,14 @@
    =error> #rx"read-JSON: bad input starting #\"falz\""
 
    (read-JSON (port-with-particulars #"noll"))
-   =error> #rx"read-JSON: bad input starting #\"noll\""))
+   =error> #rx"read-JSON: bad input starting #\"noll\"")
+
+  ;; test jsexpr-mhash?
+  (parameterize ([jsexpr-mhash? #t])
+    (test
+     (not (immutable? (string->jsexpr @T{ {} })))
+     (not (immutable? (string->jsexpr @T{ {"x":1} })))
+     (not (immutable? (string->jsexpr @T{ {"x":1,"y":2} }))))))
 
 (define (convert-tests)
   (for ([x (list 0 1 -1 12345 0.0 1.0 #t #f (λ (n) n) "" "abc" "abc\n\\"
