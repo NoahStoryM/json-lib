@@ -154,7 +154,7 @@
 ;; -----------------------------------------------------------------------------
 ;; GENERATION  (from Racket to JSON)
 
-(: write-jsexpr [->* (JSON)
+(: write-jsexpr [->* (JSExpr)
                      (Output-Port
                       Symbol
                       #:null JSExpr
