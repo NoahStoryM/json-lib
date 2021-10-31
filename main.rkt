@@ -36,6 +36,10 @@
  ;; Type and Predicate
  JSON json? JSExpr jsexpr?
 
+ JS-Number  json-number?
+ JS-List    json-list?
+ JS-Object  json-object?
+
  JS-Inf     js-inf?
  JS-Pos-Inf js-inf+? JSON-inf+
  JS-Neg-Inf js-inf-? JSON-inf-
