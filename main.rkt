@@ -34,11 +34,12 @@
  jsexpr-mhash?
 
  ;; Type and Predicate
- JSON json? JSExpr jsexpr?
+ JSON Mutable-JSON Immutable-JSON immutable-json? JSExpr jsexpr?
 
- JS-Number  json-number?
- JS-List    json-list?
- JS-Object  json-object?
+ JS-MList JS-List json-list?
+ JS-MHash JS-Hash json-hash?
+
+ JS-Constant json-constant? JS-Number json-number?
 
  JS-Inf     js-inf?
  JS-Pos-Inf js-inf+? JSON-inf+
@@ -82,16 +83,21 @@
 
 (struct js-null () #:transparent #:type-name JS-Null)
 
-(define-type JS-List (Listof JSON))
+(define-type JS-Constant (U JS-Number JS-Null Boolean String))
+(define-predicate json-constant? JS-Constant)
+
+(define-type JS-MList (MListof Mutable-JSON))
+(define-type JS-List  (Listof  Immutable-JSON))
 (define-predicate json-list? JS-List)
 
-(define-type JS-Object (Immutable-HashTable Symbol JSON))
-(define-predicate json-object? JS-Object)
+(define-type JS-MHash (Mutable-HashTable   Symbol Mutable-JSON))
+(define-type JS-Hash  (Immutable-HashTable Symbol Immutable-JSON))
+(define-predicate json-hash? JS-Hash)
 
-(define-type JSON (U JS-Number Boolean
-                     JS-Null   String
-                     JS-List   JS-Object))
-(define-predicate json? JSON)
+(define-type Mutable-JSON   (U JS-Constant JS-MList JS-MHash))
+(define-type Immutable-JSON (U JS-Constant JS-List  JS-Hash))
+(define-type JSON (U Mutable-JSON Immutable-JSON))
+(define-predicate immutable-json? Immutable-JSON)
 
 (define-type JSExpr Any)
 (: jsexpr? [-> Any
@@ -151,6 +157,30 @@
 (: jsexpr-mhash? (Parameter Boolean))
 (define jsexpr-mhash? (make-parameter #f))
 
+
+;; -----------------------------------------------------------------------------
+;; HELP FUNCTIONS
+
+(: mmap (All (A B) [-> [-> A B] (MListof A) (MListof B)]))
+(define (mmap f l)
+  (let loop ([l l] [res : (MListof B) '()])
+    (if (null? l) res (loop (mcdr l) (mcons (f (mcar l)) res)))))
+
+(: mreverse (All (A) [-> (MListof A) (MListof A)]))
+(define (mreverse l)
+  (let loop ([l l] [res : (MListof A) '()])
+    (if (null? l) res (loop (mcdr l) (mcons (mcar l) res)))))
+
+(: list->mlist (All (A) [-> (Listof A) (MListof A)]))
+(define (list->mlist l)
+  (let loop ([l l] [res : (MListof A) '()])
+    (if (null? l) (mreverse res) (loop (cdr l) (mcons (car l) res)))))
+
+(: mlist->list (All (A) [-> (MListof A) (Listof A)]))
+(define (mlist->list l)
+  (let loop ([l l] [res : (Listof A) '()])
+    (if (null? l) (reverse  res) (loop (mcdr l) (cons (mcar l) res)))))
+
 ;; -----------------------------------------------------------------------------
 ;; GENERATION  (from Racket to JSON)
 
@@ -172,7 +202,7 @@
   (parameterize ([json-null jsnull]
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-])
-    (write-JSON* who (jsexpr->json x) o enc)))
+    (write-JSON* who (jsexpr->json x #:mutable #f) o enc)))
 
 (: write-JSON [->* (JSON)
                    (Output-Port
@@ -181,7 +211,7 @@
                    Void])
 (define (write-JSON js
                     [o (current-output-port)]
-                    [who 'write-JSON]
+                    [who 'write-Immutable-JSON]
                     #:encode [enc 'control])
   (write-JSON* who js o enc))
 
@@ -242,52 +272,64 @@
 
       (let loop : Any ([js js])
         (cond
-          [(and (js-inf+? js)
-                ;; eliminate endless loops
-                (not (equal? json-inf+ (json-inf+)))
-                (not (js-inf+? (json-inf+))))
-           (define jsinf+ (json-inf+))
-           (parameterize ([json-inf+ undefined])
-             (loop (jsexpr->json jsinf+)))]
-          [(and (js-inf-? js)
-                ;; eliminate endless loops
-                (not (equal? json-inf- (json-inf-)))
-                (not (js-inf-? (json-inf-))))
-           (define jsinf- (json-inf-))
-           (parameterize ([json-inf- undefined])
-             (loop (jsexpr->json jsinf-)))]
-          [(js-null? js) (write-bytes #"null"  o)]
-          [(eq? js #f)   (write-bytes #"false" o)]
-          [(eq? js #t)   (write-bytes #"true"  o)]
-          [(or (exact-integer? js) (inexact-rational? js)) (write js o)]
-          [(string? js) (write-JSON-string js)]
-          [(json-list? js)
+          [(json-constant? js)
+           (cond
+             [(and (js-inf+? js)
+                   ;; eliminate endless loops
+                   (not (equal? json-inf+ (json-inf+)))
+                   (not (js-inf+? (json-inf+))))
+              (define jsinf+ (json-inf+))
+              (parameterize ([json-inf+ undefined])
+                (loop (jsexpr->json jsinf+ #:mutable #f)))]
+             [(and (js-inf-? js)
+                   ;; eliminate endless loops
+                   (not (equal? json-inf- (json-inf-)))
+                   (not (js-inf-? (json-inf-))))
+              (define jsinf- (json-inf-))
+              (parameterize ([json-inf- undefined])
+                (loop (jsexpr->json jsinf- #:mutable #f)))]
+             [(js-null? js) (write-bytes #"null"  o)]
+             [(eq? js #f)   (write-bytes #"false" o)]
+             [(eq? js #t)   (write-bytes #"true"  o)]
+             [(or (exact-integer? js) (inexact-rational? js)) (write js o)]
+             [(string? js) (write-JSON-string js)]
+             [else (raise-type-error who "legal JSON value" js)])]
+          [(or (list? js) (mpair? js))
            (write-bytes #"[" o)
-           (when (pair? js)
-             (loop (car js))
-             (for ([js (in-list (cdr js))])
-               (write-bytes #"," o)
-               (loop js)))
+           (cond [(pair? js)
+                  (loop (car js))
+                  (for ([js (in-list (cdr js))])
+                    (write-bytes #"," o)
+                    (loop js))]
+                 [(mpair? js)
+                  (loop (mcar js))
+                  (for ([js (in-mlist (mcdr js))])
+                    (write-bytes #"," o)
+                    (loop js))])
            (write-bytes #"]" o)]
-          [(json-object? js)
+          [(hash? js)
            (: first? Boolean)
            (define first? #t)
 
+           (: write-hash-kv [-> Symbol JSON Any])
+           (define write-hash-kv
+             (lambda (k v)
+               (if first? (set! first? #f) (write-bytes #"," o))
+               ;; use a string encoding so we get the same deal with
+               ;; `rx-to-encode'
+               (write-JSON-string (symbol->string k))
+               (write-bytes #":" o)
+               (loop v)))
+
            (write-bytes #"{" o)
-           (hash-for-each
-            js
-            (ann (lambda (k v)
-                   (if first? (set! first? #f) (write-bytes #"," o))
-                   ;; use a string encoding so we get the same deal with
-                   ;; `rx-to-encode'
-                   (write-JSON-string (symbol->string k))
-                   (write-bytes #":" o)
-                   (loop v))
-                 [-> Symbol JSON Any])
-            ;; order output
-            #t)
-           (write-bytes #"}" o)]
-          [else (raise-type-error who "legal JSON value" js)]))
+           (if (json-hash? js)
+               (hash-for-each js (ann write-hash-kv [-> Symbol Immutable-JSON Any])
+                              ;; order output
+                              #t)
+               (hash-for-each js (ann write-hash-kv [-> Symbol Mutable-JSON Any])
+                              ;; order output
+                              #t))
+           (write-bytes #"}" o)]))
 
       (void))))
 
@@ -304,24 +346,26 @@
                     JSExpr])
 (define (read-jsexpr [i (current-input-port)]
                      [who 'read-jsexpr]
-                     #:null [jsnull (json-null)]
-                     #:inf+ [jsinf+ (json-inf+)]
-                     #:inf- [jsinf- (json-inf-)]
-                     #:mhash? [m-hash? (jsexpr-mhash?)])
+                     #:null   [jsnull (json-null)]
+                     #:inf+   [jsinf+ (json-inf+)]
+                     #:inf-   [jsinf- (json-inf-)]
+                     #:mhash? [jsmhash? (jsexpr-mhash?)])
   (parameterize ([json-null jsnull]
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-]
-                 [jsexpr-mhash? m-hash?])
-    (define js (read-JSON* who i))
+                 [jsexpr-mhash? jsmhash?])
+    (define js (read-JSON* who i #:mutable? #f))
     (if (eof-object? js)
         eof
         (json->jsexpr js))))
 
-(: read-JSON [->* () (Input-Port Symbol) (U EOF JSON)])
-(define (read-JSON [i (current-input-port)] [who 'read-JSON])
-  (read-JSON* who i))
+(: read-JSON (case-> [->* (#:mutable? False) (Input-Port Symbol) (U EOF Immutable-JSON)]
+                     [->* (#:mutable? True)  (Input-Port Symbol) (U EOF Mutable-JSON)]))
+(define (read-JSON #:mutable? mutable? [i (current-input-port)] [who 'read-JSON])
+  (read-JSON* who i #:mutable? mutable?))
 
-(: read-JSON* [-> Symbol Input-Port (U EOF JSON)])
+(: read-JSON* (case-> [-> Symbol Input-Port #:mutable? False (U EOF Immutable-JSON)]
+                      [-> Symbol Input-Port #:mutable? True  (U EOF Mutable-JSON)]))
 (define read-JSON*
   (let ()
     (define-type JS-Whitespace (U #\space #\tab #\newline #\return))
@@ -335,7 +379,7 @@
     (define-type Digit-Byte (U #x30 #x31 #x32 #x33 #x34 #x35 #x36 #x37 #x38 #x39))
     (define-predicate digit-byte? Digit-Byte)
 
-    (λ (who i)
+    (λ (who i #:mutable? mutable?)
       ;; Follows the specification (eg, at json.org) -- no extensions.
       ;;
       (: err [-> String Any * Nothing])
@@ -493,41 +537,78 @@
         (loop result 0 #f))
 
       ;;
-      (: read-list (All (A) [-> Symbol Char [-> A] (Listof A)]))
-      (define (read-list what end read-one)
-        (define ch (skip-whitespace))
-        (cond
-          [(eqv? end ch) (read-byte i) '()]
-          [else
-           (let loop : (Listof A) ([l : (Listof A) (list (read-one))])
-             (define ch (skip-whitespace))
+      (: read-list  (All (A) [-> Symbol Char [-> A] (Listof  A)]))
+      (: read-mlist (All (A) [-> Symbol Char [-> A] (MListof A)]))
+      (define-values (read-list read-mlist)
+        (let ()
+          (: make (All (A) (case-> [-> [-> A (Listof A)  (Pairof  A (Listof A))]
+                                       [-> (Listof A)  (Listof A)]
+                                       [-> Symbol Char [-> A] (Listof A)]]
+                                   [-> [-> A (MListof A) (MPairof A(MListof A))]
+                                       [-> (MListof A) (MListof A)]
+                                       [-> Symbol Char [-> A] (MListof A)]])))
+          (define ((make tcons treverse) what end read-one)
+            (define ch (skip-whitespace))
+              (cond
+                [(eqv? end ch) (read-byte i) '()]
+                [else
+                 (let loop ([l (tcons (read-one) '())])
+                   (define ch (skip-whitespace))
 
-             (cond
-               [(eqv? ch end) (read-byte i) (reverse l)]
-               [(eqv? ch #\,) (read-byte i) (loop (cons (read-one) l))]
-               [else
-                (read-byte i) ;; consume the eof
-                (err "error while parsing a json ~a" what)]))]))
+                   (cond
+                     [(eqv? ch end) (read-byte i) (treverse l)]
+                     [(eqv? ch #\,) (read-byte i) (loop (tcons (read-one) l))]
+                     [else
+                      (read-byte i) ;; consume the eof
+                      (err "error while parsing a json ~a" what)]))]))
+
+            (values (λ #:forall (A) (what end read-one)
+                      (((inst make A) (inst cons  A (Listof A))  (inst reverse A))
+                       what end read-one))
+                    (λ #:forall (A) (what end read-one)
+                      (((inst make A) (inst mcons A (MListof A)) (inst mreverse A))
+                       what end read-one)))))
 
       ;;
-      (: read-hash [-> (Immutable-HashTable Symbol JSON)])
-      (define (read-hash)
-        (: read-pair [-> (Pair Symbol JSON)])
-        (define (read-pair)
-          (define k (read-JSON))
-          (unless (string? k) (err "non-string value used for json object key"))
-          (define ch (skip-whitespace))
-          (when (eof-object? ch)
-            (read-byte i) ;; consume the eof
-            (err "unexpected end-of-file while parsing a json object pair"))
-          (unless (char=? #\: ch)
-            (err "error while parsing a json object pair"))
-          (read-byte i)
-          (cons (string->symbol k) (read-JSON)))
+      (: read-hash  [-> JS-Hash])
+      (: read-mhash [-> JS-MHash])
+      (define-values (read-hash read-mhash)
+        (let ()
+          (define-type JS-Pair  (Pairof  Symbol Immutable-JSON))
+          (define-type JS-MPair (MPairof Symbol Mutable-JSON))
 
-        (for/hasheq : (Immutable-HashTable Symbol JSON)
-             ([p (in-list (read-list 'object #\} read-pair))])
-          (values (car p) (cdr p))))
+          (: read-pair  [-> JS-Pair])
+          (: read-mpair [-> JS-MPair])
+          (define-values (read-pair read-mpair)
+            (let ()
+              (: make (case-> [-> [-> Symbol Immutable-JSON JS-Pair]  #:mutable? False [-> JS-Pair]]
+                              [-> [-> Symbol Mutable-JSON   JS-MPair] #:mutable? True  [-> JS-MPair]]))
+              (define ((make tcons #:mutable? mutable?))
+                (define k (read-JSON #:mutable? mutable?))
+                (unless (string? k) (err "non-string value used for json object key"))
+
+                (define ch (skip-whitespace))
+                (when (eof-object? ch)
+                  (read-byte i) ;; consume the eof
+                  (err "unexpected end-of-file while parsing a json object pair"))
+                (unless (char=? #\: ch)
+                  (err "error while parsing a json object pair"))
+                (read-byte i)
+
+                (tcons (string->symbol k) (read-JSON #:mutable? mutable?)))
+
+              (values (make cons #:mutable? #f) (make mcons #:mutable? #t))))
+
+          (values (λ ()
+                    (for/hasheq : JS-Hash
+                         ([p (in-list (read-list 'object #\} read-pair))])
+                      (values (car p) (cdr p))))
+                  (λ ()
+                    (: result JS-MHash)
+                    (define result (make-hasheq))
+                    (for ([p (in-mlist (read-mlist 'object #\} read-mpair))])
+                      (hash-set! result (mcar p) (mcdr p)))
+                    result))))
 
       ;;
       (: read-literal [-> Bytes Void])
@@ -704,9 +785,11 @@
         (start))
 
       ;;
-      (: read-JSON (case-> [->* () (False) JSON]
-                           [->* () (Boolean) (U EOF JSON)]))
-      (define (read-JSON [top? #f])
+      (: read-JSON (case-> [->* (#:mutable? False) (False) Immutable-JSON]
+                           [->* (#:mutable? True)  (False) Mutable-JSON]
+                           [->* (#:mutable? False) (True) (U EOF Immutable-JSON)]
+                           [->* (#:mutable? True)  (True) (U EOF Mutable-JSON)]))
+      (define (read-JSON #:mutable? mutable? [top? #f])
         (define ch (skip-whitespace))
         (cond
           [(eof-object? ch)
@@ -723,11 +806,25 @@
            (read-number ch)]
           [(eqv? ch #\") (read-byte i)
                          (read-a-string)]
-          [(eqv? ch #\[) (read-byte i)
-                         (read-list 'array #\] read-JSON)]
-          [(eqv? ch #\{) (read-byte i)
-                         (read-hash)]
-          [else (bad-input)]))
+
+          [(not mutable?)
+           (cond
+             [(eqv? ch #\[)
+              (read-byte i)
+              (read-list 'array #\] (λ () (read-JSON #:mutable? #f)))]
+             [(eqv? ch #\{)
+              (read-byte i)
+              (read-hash)]
+             [else (bad-input)])]
+          [mutable?
+           (cond
+             [(eqv? ch #\[)
+              (read-byte i)
+              (read-mlist 'array #\] (λ () (read-JSON #:mutable? #t)))]
+             [(eqv? ch #\{)
+              (read-byte i)
+              (read-mhash)]
+             [else (bad-input)])]))
 
       ;;
       (: bad-input [->* () (Bytes #:eof? Boolean) Nothing])
@@ -740,11 +837,13 @@
                                 (if (equal? prefix #"")
                                     ""
                                     (format "after ~e" prefix))))
-            (err (format "bad input starting ~e" (bytes-append prefix (if (number? bytes-read)
-                                                                          (subbytes bstr 0 bytes-read)
-                                                                          #""))))))
+            (err (format "bad input starting ~e"
+                         (bytes-append prefix
+                                       (if (number? bytes-read)
+                                           (subbytes bstr 0 bytes-read)
+                                           #""))))))
       ;;
-      (read-JSON #t))))
+      (read-JSON #t #:mutable? mutable?))))
 
 ;; -----------------------------------------------------------------------------
 ;; CONVENIENCE FUNCTIONS
@@ -772,61 +871,94 @@
                     [#:mhash? Boolean]
                     JSExpr])
 (define (json->jsexpr js
-                      #:null [jsnull (json-null)]
-                      #:inf+ [jsinf+ (json-inf+)]
-                      #:inf- [jsinf- (json-inf-)]
-                      #:mhash? [m-hash? (jsexpr-mhash?)])
+                      #:null   [jsnull   (json-null)]
+                      #:inf+   [jsinf+   (json-inf+)]
+                      #:inf-   [jsinf-   (json-inf-)]
+                      #:mhash? [jsmhash? (jsexpr-mhash?)])
   (parameterize ([json-null jsnull]
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-]
-                 [jsexpr-mhash? m-hash?])
+                 [jsexpr-mhash? jsmhash?])
     (cond
-      [(json-number? js)
-       (cond [(or (exact-integer? js) (inexact-rational? js)) js]
-             [(js-inf+? js) (json-inf+)]
-             [(js-inf-? js) (json-inf-)])]
-      [(js-null? js) (json-null)]
-      [(boolean? js) js]
-      [(string? js) js]
-      [(json-list? js) (map json->jsexpr js)]
-      [(json-object? js)
-       (cond
-         [m-hash?
-          (: result (Mutable-HashTable Symbol JSExpr))
-          (define result (make-hasheq))
-          (for ([(k v) (in-hash js)])
-            (hash-set! result k v))
-          result]
-         [else
-          (for/hasheq : (Immutable-HashTable Symbol JSExpr)
-               ([(k v) (in-hash js)])
-            (values k (json->jsexpr v)))])])))
+      [(json-constant? js)
+       (cond [(js-inf+? js) (json-inf+)]
+             [(js-inf-? js) (json-inf-)]
+             [(js-null? js) (json-null)]
+             [else js])]
+      [(immutable-json? js)
+       (cond [(json-list? js) (map json->jsexpr js)]
+             [(json-hash? js)
+              (cond
+                [(jsexpr-mhash?)
+                 (: result (Mutable-HashTable Symbol JSExpr))
+                 (define result (make-hasheq))
+                 (for ([(k v) (in-hash js)])
+                   (hash-set! result k v))
+                 result]
+                [else
+                 (for/hasheq : (Immutable-HashTable Symbol JSExpr)
+                     ([(k v) (in-hash js)])
+                   (values k (json->jsexpr v)))])])]
+      [else
+       (cond [(null? js) '()]
+             [(mpair? js) (mlist->list (mmap json->jsexpr js))]
+             [(hash? js)
+              (cond
+                [(jsexpr-mhash?)
+                 (: result (Mutable-HashTable Symbol JSExpr))
+                 (define result (make-hasheq))
+                 (for ([(k v) (in-hash js)])
+                   (hash-set! result k v))
+                 result]
+                [else
+                 (for/hasheq : (Immutable-HashTable Symbol JSExpr)
+                     ([(k v) (in-hash js)])
+                   (values k (json->jsexpr v)))])])])))
 
-(: jsexpr->json [-> JSExpr
-                    [#:null JSExpr]
-                    [#:inf+ JSExpr]
-                    [#:inf- JSExpr]
-                    JSON])
+(: jsexpr->json (case-> [-> JSExpr
+                            #:mutable? False
+                            [#:null JSExpr]
+                            [#:inf+ JSExpr]
+                            [#:inf- JSExpr]
+                            Immutable-JSON]
+                        [-> JSExpr
+                            #:mutable? True
+                            [#:null JSExpr]
+                            [#:inf+ JSExpr]
+                            [#:inf- JSExpr]
+                            Mutable-JSON]))
 (define (jsexpr->json x
-                      #:null [jsnull (json-null)]
-                      #:inf+ [jsinf+ (json-inf+)]
-                      #:inf- [jsinf- (json-inf-)])
+                      #:mutable? mutable?
+                      #:null     [jsnull (json-null)]
+                      #:inf+     [jsinf+ (json-inf+)]
+                      #:inf-     [jsinf- (json-inf-)])
   (parameterize ([json-null jsnull]
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-])
     (cond
-      [(or (equal? x json-inf+) (eq? x (json-inf+)) (js-inf+? x)) JSON-inf+]
-      [(or (equal? x json-inf-) (eq? x (json-inf-)) (js-inf-? x)) JSON-inf-]
-      [(or (equal? x json-null) (eq? x (json-null)) (js-null? x)) JSON-null]
-      [(boolean? x) x]
-      [(json-number? x) x]
-      [(string? x) x]
-      [(list? x) (map jsexpr->json x)]
-      [(hash? x)
-       (for/hasheq : (Immutable-HashTable Symbol JSON)
-            ([(k v) (in-hash x)])
-         (values (assert k symbol?) (jsexpr->json v)))]
-      [else (raise-type-error 'jsexpr->json "jsexpr?" x)])))
+      [(json-constant? x)
+       (cond [(or (equal? x json-inf+) (eq? x (json-inf+)) (js-inf+? x)) JSON-inf+]
+             [(or (equal? x json-inf-) (eq? x (json-inf-)) (js-inf-? x)) JSON-inf-]
+             [(or (equal? x json-null) (eq? x (json-null)) (js-null? x)) JSON-null]
+             [else x])]
+      [(eq? #f mutable?)
+       (cond [(list? x) (map (λ (arg) (jsexpr->json arg #:mutable? #f)) x)]
+             ;; [(mpair? x) (mlist->list (mmap (λ (arg) (jsexpr->json arg #:mutable? #f)) x))] ; TODO
+             [(hash? x)
+              (for/hasheq : JS-Hash
+                   ([(k v) (in-hash x)])
+                (values (assert k symbol?) (jsexpr->json v #:mutable? #f)))]
+             [else (raise-type-error 'jsexpr->json "jsexpr?" x)])]
+      [(eq? #t mutable?)
+       (cond [(list? x) (list->mlist (map (λ (arg) (jsexpr->json arg #:mutable? #t)) x))]
+             ;; [(mpair? x) (mmap (λ (arg) (jsexpr->json arg #:mutable? #t)) x)] ; TODO
+             [(hash? x)
+              (: result JS-MHash)
+              (define result (make-hasheq))
+              (for ([(k v) (in-hash x)])
+                (hash-set! result (assert k symbol?) (jsexpr->json v #:mutable? #t)))
+              result]
+             [else (raise-type-error 'jsexpr->json "jsexpr?" x)])])))
 
 
 (: json->string [->* (JSON) (Symbol #:encode Encode) String])
@@ -841,15 +973,17 @@
   (write-JSON js o who #:encode enc)
   (get-output-bytes o))
 
-(: string->json [->* (String) (Symbol) (U EOF JSON)])
-(define (string->json str [who 'string->json])
+(: string->json (case-> [->* (String #:mutable? False) (Symbol) (U EOF Immutable-JSON)]
+                        [->* (String #:mutable? True ) (Symbol) (U EOF Mutable-JSON)]))
+(define (string->json str #:mutable? mutable? [who 'string->json])
   (define i (open-input-string str))
-  (read-JSON i who))
+  (read-JSON i who #:mutable? mutable?))
 
-(: bytes->json [->* (Bytes) (Symbol) (U EOF JSON)])
-(define (bytes->json bs [who 'bytes->json])
+(: bytes->json (case-> [->* (Bytes #:mutable? False) (Symbol) (U EOF Immutable-JSON)]
+                       [->* (Bytes #:mutable? True ) (Symbol) (U EOF Mutable-JSON)]))
+(define (bytes->json bs #:mutable? mutable? [who 'bytes->json])
   (define i (open-input-bytes bs))
-  (read-JSON i who))
+  (read-JSON i who #:mutable? mutable?))
 
 
 (: jsexpr->string [->* (JSExpr)
@@ -868,7 +1002,7 @@
   (parameterize ([json-null jsnull]
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-])
-    (json->string (jsexpr->json x) who #:encode enc)))
+    (json->string (jsexpr->json x #:mutable? #f) who #:encode enc)))
 
 (: jsexpr->bytes [->* (JSExpr)
                       (Symbol
@@ -886,7 +1020,7 @@
   (parameterize ([json-null jsnull]
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-])
-    (json->bytes (jsexpr->json x) who #:encode enc)))
+    (json->bytes (jsexpr->json x #:mutable? #f) who #:encode enc)))
 
 (: string->jsexpr [->* (String)
                        (Symbol
@@ -900,13 +1034,13 @@
                         #:null [jsnull (json-null)]
                         #:inf+ [jsinf+ (json-inf+)]
                         #:inf- [jsinf- (json-inf-)]
-                        #:mhash? [m-hash? (jsexpr-mhash?)])
+                        #:mhash? [jsmhash? (jsexpr-mhash?)])
   (define i (open-input-string str))
   (parameterize ([json-null jsnull]
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-]
-                 [jsexpr-mhash? m-hash?])
-    (define js (read-JSON* who i))
+                 [jsexpr-mhash? jsmhash?])
+    (define js (read-JSON* who i #:mutable? #f))
     (if (eof-object? js)
         eof
         (json->jsexpr js))))
@@ -923,13 +1057,13 @@
                        #:null [jsnull (json-null)]
                        #:inf+ [jsinf+ (json-inf+)]
                        #:inf- [jsinf- (json-inf-)]
-                       #:mhash? [m-hash? (jsexpr-mhash?)])
+                       #:mhash? [jsmhash? (jsexpr-mhash?)])
   (define i (open-input-bytes bs))
   (parameterize ([json-null jsnull]
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-]
-                 [jsexpr-mhash? m-hash?])
-    (define js (read-JSON* who i))
+                 [jsexpr-mhash? jsmhash?])
+    (define js (read-JSON* who i #:mutable #f))
     (if (eof-object? js)
         eof
         (json->jsexpr js))))

@@ -137,10 +137,10 @@
 
      ;; test json
      ;; default
-     (string->json (json->string (N x JSON-null)))
+     (string->json #:mutable? #f (json->string (N x JSON-null)))
      => (N x JSON-null)
      ;; encode all non-ascii
-     (string->json (json->string (N x JSON-null) #:encode 'all))
+     (string->json #:mutable? #f (json->string (N x JSON-null) #:encode 'all))
      => (N x JSON-null)))
 
   ;; also test some specific expected encodings
@@ -169,10 +169,10 @@
    (json->string "λ∀𝄞" #:encode 'all)
    => "\"\\u03bb\\u2200\\ud834\\udd1e\""
    ;; and that the same holds for keys
-   (json->string (string->json "{\"\U0010FFFF\":\"\U0010FFFF\"}"))
+   (json->string (string->json #:mutable? #f "{\"\U0010FFFF\":\"\U0010FFFF\"}"))
    => "{\"\U0010FFFF\":\"\U0010FFFF\"}"
    (json->string #hash[(a . 1) (b . 2)]) => "{\"a\":1,\"b\":2}"
-   (json->string (string->json "{\"\U0010FFFF\":\"\U0010FFFF\"}")
+   (json->string (string->json #:mutable? #f "{\"\U0010FFFF\":\"\U0010FFFF\"}")
                  #:encode 'all)
    => "{\"\\udbff\\udfff\":\"\\udbff\\udfff\"}")
 
@@ -441,83 +441,83 @@
 
 
    ;; test json
-   (string->json @T{  0   }) =>  0
-   (string->json @T{  0x  }) =>  0 ; not clearly a good idea, but preserve old behavior
-   (string->json @T{  1   }) =>  1
-   (string->json @T{ -1   }) => -1 ; note: `+' is forbidden
-   (string->json @T{ -12  }) => -12
-   (string->json @T{ -123 }) => -123
-   (string->json @T{  1.0 }) =>  1.0
-   (string->json @T{  1.3 }) =>  1.3
-   (string->json @T{  1.34}) =>  1.34
-   (string->json @T{ -1.0 }) => -1.0
-   (string->json @T{ -1.3 }) => -1.3
-   (string->json @T{-10.34}) => -10.34
-   (string->json @T{-10.34e3}) => -10340.0
-   (string->json @T{-10.34e03}) => -10340.0
-   (string->json @T{-10.34e+3}) => -10340.0
-   (string->json @T{-10.34e+03}) => -10340.0
-   (string->json @T{-10.34e+0x}) => -10.340 ; preserve old behavior
-   (string->json @T{-10.34e-3}) => -1.034e-2
-   (string->json @T{-10.34e-03}) => -1.034e-2
-   (string->json @T{-10.34e+31}) => -1.034e32
-   (string->json @T{ 1e9999999999999999    }) => JSON-inf+
-   (string->json @T{ 1.0e9999999999999999  }) => JSON-inf+
-   (string->json @T{-1e9999999999999999    }) => JSON-inf-
-   (string->json @T{-1.0e9999999999999999  }) => JSON-inf-
-   (string->json @T{ 1e-9999999999999999   }) =>  0.0
-   (string->json @T{-1e-9999999999999999   }) => -0.0
-   (string->json @T{ 0e9999999999999999    }) => 0.0
-   (string->json @T{ 0e-9999999999999999   }) => 0.0
-   (string->json @T{ 0.001e310 }) => 1.0e307
-   (string->json @T{ 100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e-402 }) => 1e-292
-   (string->json @T{ true  }) => #t
-   (string->json @T{ false }) => #f
-   (string->json @T{ null  }) => JSON-null
-   (string->json @T{ ""    }) => ""
-   (string->json @T{ "abc" }) => "abc"
-   (string->json @T{ [] }) => '()
-   (string->json @T{ [1,[2],3] }) => '(1 (2) 3)
-   (string->json @T{ [ 1 , [ 2 ] , 3 ] }) => '(1 (2) 3)
-   (string->json @T{ [true, false, null] }) => `(#t #f ,JSON-null)
-   (immutable? (string->json @T{ {} }))
-   (immutable? (string->json @T{ {"x":1} }))
-   (immutable? (string->json @T{ {"x":1,"y":2} }))
-   (string->json @T{ {} }) => '#hasheq()
-   (string->json @T{ {"x":1} }) => '#hasheq([x . 1])
-   (string->json @T{ {"x":1,"y":2} }) => '#hasheq([x . 1] [y . 2])
-   (string->json @T{ [{"x": 1}, {"y": 2}] }) =>
+   (string->json #:mutable? #f @T{  0   }) =>  0
+   (string->json #:mutable? #f @T{  0x  }) =>  0 ; not clearly a good idea, but preserve old behavior
+   (string->json #:mutable? #f @T{  1   }) =>  1
+   (string->json #:mutable? #f @T{ -1   }) => -1 ; note: `+' is forbidden
+   (string->json #:mutable? #f @T{ -12  }) => -12
+   (string->json #:mutable? #f @T{ -123 }) => -123
+   (string->json #:mutable? #f @T{  1.0 }) =>  1.0
+   (string->json #:mutable? #f @T{  1.3 }) =>  1.3
+   (string->json #:mutable? #f @T{  1.34}) =>  1.34
+   (string->json #:mutable? #f @T{ -1.0 }) => -1.0
+   (string->json #:mutable? #f @T{ -1.3 }) => -1.3
+   (string->json #:mutable? #f @T{-10.34}) => -10.34
+   (string->json #:mutable? #f @T{-10.34e3}) => -10340.0
+   (string->json #:mutable? #f @T{-10.34e03}) => -10340.0
+   (string->json #:mutable? #f @T{-10.34e+3}) => -10340.0
+   (string->json #:mutable? #f @T{-10.34e+03}) => -10340.0
+   (string->json #:mutable? #f @T{-10.34e+0x}) => -10.340 ; preserve old behavior
+   (string->json #:mutable? #f @T{-10.34e-3}) => -1.034e-2
+   (string->json #:mutable? #f @T{-10.34e-03}) => -1.034e-2
+   (string->json #:mutable? #f @T{-10.34e+31}) => -1.034e32
+   (string->json #:mutable? #f @T{ 1e9999999999999999    }) => JSON-inf+
+   (string->json #:mutable? #f @T{ 1.0e9999999999999999  }) => JSON-inf+
+   (string->json #:mutable? #f @T{-1e9999999999999999    }) => JSON-inf-
+   (string->json #:mutable? #f @T{-1.0e9999999999999999  }) => JSON-inf-
+   (string->json #:mutable? #f @T{ 1e-9999999999999999   }) =>  0.0
+   (string->json #:mutable? #f @T{-1e-9999999999999999   }) => -0.0
+   (string->json #:mutable? #f @T{ 0e9999999999999999    }) => 0.0
+   (string->json #:mutable? #f @T{ 0e-9999999999999999   }) => 0.0
+   (string->json #:mutable? #f @T{ 0.001e310 }) => 1.0e307
+   (string->json #:mutable? #f @T{ 100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e-402 }) => 1e-292
+   (string->json #:mutable? #f @T{ true  }) => #t
+   (string->json #:mutable? #f @T{ false }) => #f
+   (string->json #:mutable? #f @T{ null  }) => JSON-null
+   (string->json #:mutable? #f @T{ ""    }) => ""
+   (string->json #:mutable? #f @T{ "abc" }) => "abc"
+   (string->json #:mutable? #f @T{ [] }) => '()
+   (string->json #:mutable? #f @T{ [1,[2],3] }) => '(1 (2) 3)
+   (string->json #:mutable? #f @T{ [ 1 , [ 2 ] , 3 ] }) => '(1 (2) 3)
+   (string->json #:mutable? #f @T{ [true, false, null] }) => `(#t #f ,JSON-null)
+   (immutable? (string->json #:mutable? #f @T{ {} }))
+   (immutable? (string->json #:mutable? #f @T{ {"x":1} }))
+   (immutable? (string->json #:mutable? #f @T{ {"x":1,"y":2} }))
+   (string->json #:mutable? #f @T{ {} }) => '#hasheq()
+   (string->json #:mutable? #f @T{ {"x":1} }) => '#hasheq([x . 1])
+   (string->json #:mutable? #f @T{ {"x":1,"y":2} }) => '#hasheq([x . 1] [y . 2])
+   (string->json #:mutable? #f @T{ [{"x": 1}, {"y": 2}] }) =>
    '(#hasheq([x . 1]) #hasheq([y . 2]))
 
    ;; string escapes
-   (string->json @T{ " \b\n\r\f\t\\\"\/ " }) => " \b\n\r\f\t\\\"/ "
-   (string->json @T{ "\uD834\uDD1E" }) => "\U1D11E"
-   (string->json @T{ "\ud834\udd1e" }) => "\U1d11e"
+   (string->json #:mutable? #f @T{ " \b\n\r\f\t\\\"\/ " }) => " \b\n\r\f\t\\\"/ "
+   (string->json #:mutable? #f @T{ "\uD834\uDD1E" }) => "\U1D11E"
+   (string->json #:mutable? #f @T{ "\ud834\udd1e" }) => "\U1d11e"
    ;; INPUT PORT is optional
-   (with-input-from-string "[]" read-JSON)
+   (with-input-from-string "[]" (λ () (read-JSON #:mutable? #f)))
    => (parameterize ((json-null '())) (json-null))
    ;; EOF detection
-   (for/list ([je (in-port read-JSON
+   (for/list ([je (in-port (λ (in) (read-JSON #:mutable? #f in))
                            (open-input-string
                             @T{ 1 [2,3] "four" }))])
      je)
    => '(1 (2 3) "four")
-   (string->json "]") =error> "string->json:"
-   (string->json "foo") =error> "string->json:"
-   (string->json "") => eof
-   (string->json " \t\r\n") => eof
+   (string->json #:mutable? #f "]") =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f "foo") =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f "") => eof
+   (string->json #:mutable? #f " \t\r\n") => eof
 
    ;; Invalid UTF-8 input.
-   (bytes->json #"\"\377\377\377\"") =error> exn:fail?
+   (bytes->json #:mutable? #f #"\"\377\377\377\"") =error> exn:fail?
 
    ;; whitespace should be only the four allowed charactes
-   (string->json (string-append
+   (string->json #:mutable? #f (string-append
                   "{ \"x\" :"
                   (string #\u00A0)
                   " 123 }"))
    =error>
    #rx"whitespace that is not allowed"
-   (string->json (string-append
+   (string->json #:mutable? #f (string-append
                   "[ 1,"
                   (string #\u00A0)
                   " 2 ]"))
@@ -525,39 +525,39 @@
    #rx"whitespace that is not allowed"
 
    ;; More string escapes:
-   (string->json @T{ "hel\"lo" }) => "hel\"lo"
-   (string->json @T{ "\\//\\\\//" }) => "\\//\\\\//"
-   (string->json @T{ ["one", "t\\w\\o", 3] }) => '("one" "t\\w\\o" 3)
-   (string->json @T{ "\u000A" }) => "\u000A"
-   (string->json @T{ "/" }) => "/"
-   (string->json @T{ "\/" }) => "/"
+   (string->json #:mutable? #f @T{ "hel\"lo" }) => "hel\"lo"
+   (string->json #:mutable? #f @T{ "\\//\\\\//" }) => "\\//\\\\//"
+   (string->json #:mutable? #f @T{ ["one", "t\\w\\o", 3] }) => '("one" "t\\w\\o" 3)
+   (string->json #:mutable? #f @T{ "\u000A" }) => "\u000A"
+   (string->json #:mutable? #f @T{ "/" }) => "/"
+   (string->json #:mutable? #f @T{ "\/" }) => "/"
    ;; More error tests:
-   (string->json @T{ -}) =error> #rx"string->json:.*-"
-   (string->json @T{ -x}) =error> #rx"string->json:.*-x"
-   (string->json @T{ 1.}) =error> #rx"string->json:.*1[.]"
-   (string->json @T{ 1.x }) =error> #rx"string->json:.*1[.]x"
-   (string->json @T{ -1.}) =error> #rx"string->json:.*-1[.]"
-   (string->json @T{ -1.x }) =error> #rx"string->json:.*-1[.]x"
-   (string->json @T{ -13e }) =error> #rx"string->json:.*-13e"
-   (string->json @T{ -1.3e }) =error> #rx"string->json:.*-1[.]3e"
-   (string->json @T{ -1.3ex}) =error> #rx"string->json:.*-1[.]3e"
-   (string->json @T{ 10.3ex}) =error> #rx"string->json:.*10[.]3e"
-   (string->json @T{ [00] }) =error> "string->json:"
-   (string->json @T{ [1,2,,3] }) =error> "string->json:"
-   (string->json @T{ [1,2,3,] }) =error> "string->json:"
-   (string->json @T{ {42 : "bad-key!"} }) =error> "string->json:"
-   (string->json @T{ {'no-colon' , ""} }) =error> "string->json:"
-   (string->json @T{ {"x":1,,"y":2} }) =error> "string->json:"
-   (string->json @T{ {x:1, y:2} }) =error> "string->json:"
-   (string->json " {x:1, y:2] ") =error> "string->json:"
-   (string->json " [\"x\",1, \"y\",2} ") =error> "string->json:"
-   (string->json @T{ truelove }) =error> "string->json:"
-   (string->json @T{ truebred }) =error> "string->json:"
-   (string->json @T{ truea }) =error> "string->json:"
-   (string->json @T{ falsehood }) =error> "string->json:"
-   (string->json @T{ falsetto }) =error> "string->json:"
-   (string->json @T{ nullity }) =error> "string->json:"
-   (string->json @T{ nulliparous }) =error> "string->json:"
+   (string->json #:mutable? #f @T{ -}) =error> #rx"string->json #:mutable? #f:.*-"
+   (string->json #:mutable? #f @T{ -x}) =error> #rx"string->json #:mutable? #f:.*-x"
+   (string->json #:mutable? #f @T{ 1.}) =error> #rx"string->json #:mutable? #f:.*1[.]"
+   (string->json #:mutable? #f @T{ 1.x }) =error> #rx"string->json #:mutable? #f:.*1[.]x"
+   (string->json #:mutable? #f @T{ -1.}) =error> #rx"string->json #:mutable? #f:.*-1[.]"
+   (string->json #:mutable? #f @T{ -1.x }) =error> #rx"string->json #:mutable? #f:.*-1[.]x"
+   (string->json #:mutable? #f @T{ -13e }) =error> #rx"string->json #:mutable? #f:.*-13e"
+   (string->json #:mutable? #f @T{ -1.3e }) =error> #rx"string->json #:mutable? #f:.*-1[.]3e"
+   (string->json #:mutable? #f @T{ -1.3ex}) =error> #rx"string->json #:mutable? #f:.*-1[.]3e"
+   (string->json #:mutable? #f @T{ 10.3ex}) =error> #rx"string->json #:mutable? #f:.*10[.]3e"
+   (string->json #:mutable? #f @T{ [00] }) =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f @T{ [1,2,,3] }) =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f @T{ [1,2,3,] }) =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f @T{ {42 : "bad-key!"} }) =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f @T{ {'no-colon' , ""} }) =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f @T{ {"x":1,,"y":2} }) =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f @T{ {x:1, y:2} }) =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f " {x:1, y:2] ") =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f " [\"x\",1, \"y\",2} ") =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f @T{ truelove }) =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f @T{ truebred }) =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f @T{ truea }) =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f @T{ falsehood }) =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f @T{ falsetto }) =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f @T{ nullity }) =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f @T{ nulliparous }) =error> "string->json #:mutable? #f:"
 
 
    ;; test cases to see if the trailing eof is consumed -- the rule
@@ -566,111 +566,111 @@
    ;;  - eof is the entire thing in the stream (and thus it is returned), or
    ;;  - the eof triggered an error (ie the json object isn't complete)
    (let ([p (port-with-particulars (list #"1" eof #"a"))])
-     (list (read-JSON p)
+     (list (read-JSON p #:mutable? #f)
            (flush-data p)))
    => (list 1 (list eof 97))
 
    (let ([p (port-with-particulars (list eof #"a"))])
-     (list (read-JSON p)
+     (list (read-JSON p #:mutable? #f)
            (flush-data p)))
    =>
    (list eof (list 97))
 
    (let ([p (port-with-particulars (list eof eof #"a"))])
-     (list (read-JSON p)
+     (list (read-JSON p #:mutable? #f)
            (flush-data p)))
    =>
    (list eof (list eof 97))
 
    (let ([p (port-with-particulars (list eof eof #"a"))])
-     (list (read-JSON p)
-           (read-JSON p)
+     (list (read-JSON p #:mutable? #f)
+           (read-JSON p #:mutable? #f)
            (flush-data p)))
    =>
    (list eof eof (list 97))
 
    (let ([p (port-with-particulars (list #"\"1\"" eof eof #"a"))])
-     (list (read-JSON p)
+     (list (read-JSON p #:mutable? #f)
            (flush-data p)))
    => (list "1" (list eof eof 97))
 
    (let ([p (port-with-particulars (list #"\"1" eof eof #"a"))])
-     (list (read-JSON/swallow-error p)
+     (list (read-JSON/swallow-error p #:mutable? #f)
            (flush-data p)))
    => (list 'exn (list eof 97))
 
    (let ([p (port-with-particulars (list #"[1, 2]" eof eof #"a"))])
-     (list (read-JSON p)
+     (list (read-JSON p #:mutable? #f)
            (flush-data p)))
    => (list (list 1 2) (list eof eof 97))
 
    (let ([p (port-with-particulars (list #"[1, 2" eof eof #"a"))])
-     (list (read-JSON/swallow-error p)
+     (list (read-JSON/swallow-error p #:mutable? #f)
            (flush-data p)))
    => (list 'exn (list eof 97))
 
    (let ([p (port-with-particulars (list #"[1," eof eof #"a"))])
-     (list (read-JSON/swallow-error p)
+     (list (read-JSON/swallow-error p #:mutable? #f)
            (flush-data p)))
    => (list 'exn (list eof 97))
 
    (let ([p (port-with-particulars (list #"{ \"x\":  11 }" eof eof #"a"))])
-     (list (read-JSON p)
+     (list (read-JSON p #:mutable? #f)
            (flush-data p)))
    => (list (hasheq 'x 11) (list eof eof 97))
 
    (let ([p (port-with-particulars (list #"{ \"x\":  11 " eof eof #"a"))])
-     (list (read-JSON/swallow-error p)
+     (list (read-JSON/swallow-error p #:mutable? #f)
            (flush-data p)))
    => (list 'exn (list eof 97))
 
    (let ([p (port-with-particulars (list #"{ \"x\" " eof eof #"a"))])
-     (list (read-JSON/swallow-error p)
+     (list (read-JSON/swallow-error p #:mutable? #f)
            (flush-data p)))
    => (list 'exn (list eof 97))
 
    (let ([p (port-with-particulars (list #"{ \"x\" : " eof eof #"a"))])
-     (list (read-JSON/swallow-error p)
+     (list (read-JSON/swallow-error p #:mutable? #f)
            (flush-data p)))
    => (list 'exn (list eof 97))
 
    (let ([p (port-with-particulars (list #"{  " eof eof #"a"))])
-     (list (read-JSON/swallow-error p)
+     (list (read-JSON/swallow-error p #:mutable? #f)
            (flush-data p)))
    => (list 'exn (list eof 97))
 
    (let ([p (port-with-particulars (list #"{" eof eof #"a"))])
-     (list (read-JSON/swallow-error p)
+     (list (read-JSON/swallow-error p #:mutable? #f)
            (flush-data p)))
    => (list 'exn (list eof 97))
 
    (let ([p (port-with-particulars (list #"true" eof eof #"a"))])
-     (list (read-JSON p)
+     (list (read-JSON p #:mutable? #f)
            (flush-data p)))
    => (list #t (list eof eof 97))
 
    (let ([p (port-with-particulars (list #"false" eof eof #"a"))])
-     (list (read-JSON p)
+     (list (read-JSON p #:mutable? #f)
            (flush-data p)))
    => (list #f (list eof eof 97))
 
    (let ([p (port-with-particulars (list #"null" eof eof #"a"))])
-     (list (read-JSON p)
+     (list (read-JSON p #:mutable? #f)
            (flush-data p)))
    => (list JSON-null (list eof eof 97))
 
    ;; tests to make sure read-JSON doesn't hang when the
    ;; input is already enough to be sure we're doomed
-   (read-JSON (port-with-particulars #"started"))
+   (read-JSON #:mutable? #f (port-with-particulars #"started"))
    =error> #rx"read-JSON: bad input starting #\"started\""
 
-   (read-JSON (port-with-particulars #"try"))
+   (read-JSON #:mutable? #f (port-with-particulars #"try"))
    =error> #rx"read-JSON: bad input starting #\"try\""
 
-   (read-JSON (port-with-particulars #"falz"))
+   (read-JSON #:mutable? #f (port-with-particulars #"falz"))
    =error> #rx"read-JSON: bad input starting #\"falz\""
 
-   (read-JSON (port-with-particulars #"noll"))
+   (read-JSON #:mutable? #f (port-with-particulars #"noll"))
    =error> #rx"read-JSON: bad input starting #\"noll\"")
 
   ;; test jsexpr-mhash?
@@ -696,13 +696,13 @@
     (define (N x null) (if (procedure? x) (x null) x))
     (test
      ;; default
-     (json->jsexpr (jsexpr->json (N x 'null)))
+     (json->jsexpr (jsexpr->json #:mutable? #f (N x 'null)))
      => (N x 'null)
      ;; different null
-     (json->jsexpr (jsexpr->json (N x #\null) #:null #\null) #:null #\null)
+     (json->jsexpr (jsexpr->json #:mutable? #f (N x #\null) #:null #\null) #:null #\null)
      => (N x #\null)
      ;; JSON-null
-     (jsexpr->json (json->jsexpr (N x JSON-null)))
+     (jsexpr->json #:mutable? #f (json->jsexpr (N x JSON-null)))
      => (N x JSON-null))))
 
 (module port-with-particulars racket/base
@@ -904,11 +904,11 @@
         =>
         #"abc\0\0"))
 
-(define (read-JSON/swallow-error p)
+(define (read-JSON/swallow-error p #:mutable? mutable?)
   (with-handlers ([(λ (x) (and (exn:fail:read? x)
                                 (regexp-match #rx"^[^\n]*read-JSON:" (exn-message x))))
                    (λ (x) 'exn)])
-    (read-JSON p)
+    (read-JSON #:mutable? mutable? p)
     (error 'read-JSON/swallow-error "did not raise an error")))
 
 (define (read-jsexpr/swallow-error p)
