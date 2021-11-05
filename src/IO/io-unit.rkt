@@ -45,7 +45,7 @@
         (parameterize ([json-null jsnull]
                        [json-inf+ jsinf+]
                        [json-inf- jsinf-])
-          (write-JSON* who (jsexpr->json x #:mutable #f) o enc)))
+          (write-JSON* who (jsexpr->json x #:mutable? #f) o enc)))
 
       (: write-JSON [->* (JSON)
                          (Output-Port
@@ -123,14 +123,14 @@
                          (not (js-inf+? (json-inf+))))
                     (define jsinf+ (json-inf+))
                     (parameterize ([json-inf+ undefined])
-                      (loop (jsexpr->json jsinf+ #:mutable #f)))]
+                      (loop (jsexpr->json jsinf+ #:mutable? #f)))]
                    [(and (js-inf-? js)
                          ;; eliminate endless loops
                          (not (equal? json-inf- (json-inf-)))
                          (not (js-inf-? (json-inf-))))
                     (define jsinf- (json-inf-))
                     (parameterize ([json-inf- undefined])
-                      (loop (jsexpr->json jsinf- #:mutable #f)))]
+                      (loop (jsexpr->json jsinf- #:mutable? #f)))]
                    [(js-null? js) (write-bytes #"null"  o)]
                    [(eq? js #f)   (write-bytes #"false" o)]
                    [(eq? js #t)   (write-bytes #"true"  o)]

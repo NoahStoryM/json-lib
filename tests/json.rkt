@@ -58,56 +58,56 @@
    (jsexpr? -inf.f)
    (not (jsexpr? +nan.f))
 
-   ;; test json?
-   (json? 0)
-   (json? 1)
-   (json? -1)
-   (json? 12345)
-   (json? 0.0)
-   (json? 1.0)
-   (not (json? 1/2))
-   (not (json? +i))
-   (not (json? 'foo))
-   (not (json? 'true))
-   (json? #t)
-   (json? #f)
-   (json? JSON-null)
-   (not (json? 'null))
-   (json? "")
-   (json? "abc")
-   (json? "abc\n\\")
-   (json? '())
-   (json? '(1 2 3))
-   (json? `(1 "2" (3) #t #f ,JSON-null))
-   (not (json? '(1 "2" (3) #t #f null)))
-   (json? `(1 "2" (3) #t #f ,JSON-null))
-   (json? '((((())))))
-   (not (json? '(1 2 . 3)))
-   (not (json? '#(1 2 3)))
-   (json? '#hasheq())
-   (json? '#hasheq([x . 1]))
-   (json? '#hasheq([x . 1] [y . 2]))
-   (json? '#hash([x . 1] [y . 2])) ; fine as a json too
-   (json? '#hasheq([|x\y| . 1] [y . 2]))
-   (not (json? '#hasheq([1 . 1])))
-   (not (json? '#hasheq(["x" . 1])))
-   (not (json? '#hasheq(['() . 1])))
-   (not (json? (hash-copy '#hasheq())))
-   (not (json? (hash-copy '#hasheq([x . 1]))))
-   (not (json? (hash-copy '#hasheq([x . 1] [y . 2]))))
-   (not (json? (hash-copy '#hash([x . 1] [y . 2]))))
-   (not (json? (hash-copy '#hasheq([|x\y| . 1] [y . 2]))))
-   (not (json? (/ 1.0 0.0)))
-   (not (json? (/ -1.0 0.0)))
-   (not (json? (/ 0.0 0.0)))
-   (json? JSON-inf+)
-   (json? JSON-inf-)
-   (not (json? +inf.0))
-   (not (json? -inf.0))
-   (not (json? +nan.0))
-   (not (json? +inf.f))
-   (not (json? -inf.f))
-   (not (json? +nan.f))))
+   ;; test immutable-json?
+   (immutable-json? 0)
+   (immutable-json? 1)
+   (immutable-json? -1)
+   (immutable-json? 12345)
+   (immutable-json? 0.0)
+   (immutable-json? 1.0)
+   (not (immutable-json? 1/2))
+   (not (immutable-json? +i))
+   (not (immutable-json? 'foo))
+   (not (immutable-json? 'true))
+   (immutable-json? #t)
+   (immutable-json? #f)
+   (immutable-json? JSON-null)
+   (not (immutable-json? 'null))
+   (immutable-json? "")
+   (immutable-json? "abc")
+   (immutable-json? "abc\n\\")
+   (immutable-json? '())
+   (immutable-json? '(1 2 3))
+   (immutable-json? `(1 "2" (3) #t #f ,JSON-null))
+   (not (immutable-json? '(1 "2" (3) #t #f null)))
+   (immutable-json? `(1 "2" (3) #t #f ,JSON-null))
+   (immutable-json? '((((())))))
+   (not (immutable-json? '(1 2 . 3)))
+   (not (immutable-json? '#(1 2 3)))
+   (immutable-json? '#hasheq())
+   (immutable-json? '#hasheq([x . 1]))
+   (immutable-json? '#hasheq([x . 1] [y . 2]))
+   (immutable-json? '#hash([x . 1] [y . 2])) ; fine as a json too
+   (immutable-json? '#hasheq([|x\y| . 1] [y . 2]))
+   (not (immutable-json? '#hasheq([1 . 1])))
+   (not (immutable-json? '#hasheq(["x" . 1])))
+   (not (immutable-json? '#hasheq(['() . 1])))
+   (not (immutable-json? (hash-copy '#hasheq())))
+   (not (immutable-json? (hash-copy '#hasheq([x . 1]))))
+   (not (immutable-json? (hash-copy '#hasheq([x . 1] [y . 2]))))
+   (not (immutable-json? (hash-copy '#hash([x . 1] [y . 2]))))
+   (not (immutable-json? (hash-copy '#hasheq([|x\y| . 1] [y . 2]))))
+   (not (immutable-json? (/ 1.0 0.0)))
+   (not (immutable-json? (/ -1.0 0.0)))
+   (not (immutable-json? (/ 0.0 0.0)))
+   (immutable-json? JSON-inf+)
+   (immutable-json? JSON-inf-)
+   (not (immutable-json? +inf.0))
+   (not (immutable-json? -inf.0))
+   (not (immutable-json? +nan.0))
+   (not (immutable-json? +inf.f))
+   (not (immutable-json? -inf.f))
+   (not (immutable-json? +nan.f))))
 
 (define (print-tests)
   (for ([x (list 0 1 -1 12345 0.0 1.0 #t #f (λ (n) n) "" "abc" "abc\n\\"
@@ -502,8 +502,8 @@
                             @T{ 1 [2,3] "four" }))])
      je)
    => '(1 (2 3) "four")
-   (string->json #:mutable? #f "]") =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f "foo") =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f "]") =error> "string->json:"
+   (string->json #:mutable? #f "foo") =error> "string->json:"
    (string->json #:mutable? #f "") => eof
    (string->json #:mutable? #f " \t\r\n") => eof
 
@@ -532,32 +532,32 @@
    (string->json #:mutable? #f @T{ "/" }) => "/"
    (string->json #:mutable? #f @T{ "\/" }) => "/"
    ;; More error tests:
-   (string->json #:mutable? #f @T{ -}) =error> #rx"string->json #:mutable? #f:.*-"
-   (string->json #:mutable? #f @T{ -x}) =error> #rx"string->json #:mutable? #f:.*-x"
-   (string->json #:mutable? #f @T{ 1.}) =error> #rx"string->json #:mutable? #f:.*1[.]"
-   (string->json #:mutable? #f @T{ 1.x }) =error> #rx"string->json #:mutable? #f:.*1[.]x"
-   (string->json #:mutable? #f @T{ -1.}) =error> #rx"string->json #:mutable? #f:.*-1[.]"
-   (string->json #:mutable? #f @T{ -1.x }) =error> #rx"string->json #:mutable? #f:.*-1[.]x"
-   (string->json #:mutable? #f @T{ -13e }) =error> #rx"string->json #:mutable? #f:.*-13e"
-   (string->json #:mutable? #f @T{ -1.3e }) =error> #rx"string->json #:mutable? #f:.*-1[.]3e"
-   (string->json #:mutable? #f @T{ -1.3ex}) =error> #rx"string->json #:mutable? #f:.*-1[.]3e"
-   (string->json #:mutable? #f @T{ 10.3ex}) =error> #rx"string->json #:mutable? #f:.*10[.]3e"
-   (string->json #:mutable? #f @T{ [00] }) =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f @T{ [1,2,,3] }) =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f @T{ [1,2,3,] }) =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f @T{ {42 : "bad-key!"} }) =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f @T{ {'no-colon' , ""} }) =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f @T{ {"x":1,,"y":2} }) =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f @T{ {x:1, y:2} }) =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f " {x:1, y:2] ") =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f " [\"x\",1, \"y\",2} ") =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f @T{ truelove }) =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f @T{ truebred }) =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f @T{ truea }) =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f @T{ falsehood }) =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f @T{ falsetto }) =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f @T{ nullity }) =error> "string->json #:mutable? #f:"
-   (string->json #:mutable? #f @T{ nulliparous }) =error> "string->json #:mutable? #f:"
+   (string->json #:mutable? #f @T{ -}) =error> #rx"string->json:.*-"
+   (string->json #:mutable? #f @T{ -x}) =error> #rx"string->json:.*-x"
+   (string->json #:mutable? #f @T{ 1.}) =error> #rx"string->json:.*1[.]"
+   (string->json #:mutable? #f @T{ 1.x }) =error> #rx"string->json:.*1[.]x"
+   (string->json #:mutable? #f @T{ -1.}) =error> #rx"string->json:.*-1[.]"
+   (string->json #:mutable? #f @T{ -1.x }) =error> #rx"string->json:.*-1[.]x"
+   (string->json #:mutable? #f @T{ -13e }) =error> #rx"string->json:.*-13e"
+   (string->json #:mutable? #f @T{ -1.3e }) =error> #rx"string->json:.*-1[.]3e"
+   (string->json #:mutable? #f @T{ -1.3ex}) =error> #rx"string->json:.*-1[.]3e"
+   (string->json #:mutable? #f @T{ 10.3ex}) =error> #rx"string->json:.*10[.]3e"
+   (string->json #:mutable? #f @T{ [00] }) =error> "string->json:"
+   (string->json #:mutable? #f @T{ [1,2,,3] }) =error> "string->json:"
+   (string->json #:mutable? #f @T{ [1,2,3,] }) =error> "string->json:"
+   (string->json #:mutable? #f @T{ {42 : "bad-key!"} }) =error> "string->json:"
+   (string->json #:mutable? #f @T{ {'no-colon' , ""} }) =error> "string->json:"
+   (string->json #:mutable? #f @T{ {"x":1,,"y":2} }) =error> "string->json:"
+   (string->json #:mutable? #f @T{ {x:1, y:2} }) =error> "string->json:"
+   (string->json #:mutable? #f " {x:1, y:2] ") =error> "string->json:"
+   (string->json #:mutable? #f " [\"x\",1, \"y\",2} ") =error> "string->json:"
+   (string->json #:mutable? #f @T{ truelove }) =error> "string->json:"
+   (string->json #:mutable? #f @T{ truebred }) =error> "string->json:"
+   (string->json #:mutable? #f @T{ truea }) =error> "string->json:"
+   (string->json #:mutable? #f @T{ falsehood }) =error> "string->json:"
+   (string->json #:mutable? #f @T{ falsetto }) =error> "string->json:"
+   (string->json #:mutable? #f @T{ nullity }) =error> "string->json:"
+   (string->json #:mutable? #f @T{ nulliparous }) =error> "string->json:"
 
 
    ;; test cases to see if the trailing eof is consumed -- the rule
