@@ -34,10 +34,10 @@
  jsexpr-mhash?
 
  ;; Type and Predicate
- Mutable-JSON     mutable-json?   mjson?
- Immutable-JSON   immutable-json?
- JSON             json?
- JSExpr           jsexpr?
+ Mutable-JSON   mutable-json?   mjson?
+ Immutable-JSON immutable-json?
+ JSON           json?
+ JSExpr         jsexpr?
 
  JS-List json-list? JS-MList json-mlist?
  JS-Hash json-hash? JS-MHash json-mhash?
