@@ -138,8 +138,8 @@
   (: mjson? [-> JSON Boolean : Mutable-JSON])
   (define (mjson? js)
     (or (json-constant? js)
-        (null? js)
-        (not (immutable-json? js))))
+        (json-mlist? js)
+        (json-mhash? js)))
 
   (: json-mlist? [-> JSON Boolean : JS-MList])
   (define (json-mlist? js) (or (null? js) (mpair? js)))
