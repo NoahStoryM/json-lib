@@ -85,9 +85,9 @@
                    [json-inf+ jsinf+]
                    [json-inf- jsinf-])
       (cond
-        [(or (equal? x json-inf+) (eq? x (json-inf+))) JSON-inf+]
-        [(or (equal? x json-inf-) (eq? x (json-inf-))) JSON-inf-]
-        [(or (equal? x json-null) (eq? x (json-null))) JSON-null]
+        [(or (eq? x (json-inf+)) (equal? x json-inf+)) JSON-inf+]
+        [(or (eq? x (json-inf-)) (equal? x json-inf-)) JSON-inf-]
+        [(or (eq? x (json-null)) (equal? x json-null)) JSON-null]
         [(json-constant? x) x]
         [(eq? #f mutable?)
          (cond [(list? x) (map (λ (arg) (jsexpr->json arg #:mutable? #f)) x)]
