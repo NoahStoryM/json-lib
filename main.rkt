@@ -31,7 +31,6 @@
 (provide
  ;; Parameter
  json-null json-inf+ json-inf-
- jsexpr-mhash?
 
  ;; Type and Predicate
  JSON json? JSExpr jsexpr?
@@ -146,10 +145,6 @@
 
 (: JSON-inf- JS-Neg-Inf)
 (define JSON-inf- (js-inf-))
-
-
-(: jsexpr-mhash? (Parameter Boolean))
-(define jsexpr-mhash? (make-parameter #f))
 
 ;; -----------------------------------------------------------------------------
 ;; GENERATION  (from Racket to JSON)
@@ -299,19 +294,16 @@
                      Symbol
                      #:null JSExpr
                      #:inf+ JSExpr
-                     #:inf- JSExpr
-                     #:mhash? Boolean)
+                     #:inf- JSExpr)
                     JSExpr])
 (define (read-jsexpr [i (current-input-port)]
                      [who 'read-jsexpr]
                      #:null [jsnull (json-null)]
                      #:inf+ [jsinf+ (json-inf+)]
-                     #:inf- [jsinf- (json-inf-)]
-                     #:mhash? [m-hash? (jsexpr-mhash?)])
+                     #:inf- [jsinf- (json-inf-)])
   (parameterize ([json-null jsnull]
                  [json-inf+ jsinf+]
-                 [json-inf- jsinf-]
-                 [jsexpr-mhash? m-hash?])
+                 [json-inf- jsinf-])
     (define js (read-JSON* who i))
     (if (eof-object? js)
         eof
@@ -769,17 +761,14 @@
                     [#:null JSExpr]
                     [#:inf+ JSExpr]
                     [#:inf- JSExpr]
-                    [#:mhash? Boolean]
                     JSExpr])
 (define (json->jsexpr js
                       #:null [jsnull (json-null)]
                       #:inf+ [jsinf+ (json-inf+)]
-                      #:inf- [jsinf- (json-inf-)]
-                      #:mhash? [m-hash? (jsexpr-mhash?)])
+                      #:inf- [jsinf- (json-inf-)])
   (parameterize ([json-null jsnull]
                  [json-inf+ jsinf+]
-                 [json-inf- jsinf-]
-                 [jsexpr-mhash? m-hash?])
+                 [json-inf- jsinf-])
     (cond
       [(json-number? js)
        (cond [(or (exact-integer? js) (inexact-rational? js)) js]
@@ -790,17 +779,9 @@
       [(string? js) js]
       [(json-list? js) (map json->jsexpr js)]
       [(json-object? js)
-       (cond
-         [m-hash?
-          (: result (Mutable-HashTable Symbol JSExpr))
-          (define result (make-hasheq))
-          (for ([(k v) (in-hash js)])
-            (hash-set! result k v))
-          result]
-         [else
-          (for/hasheq : (Immutable-HashTable Symbol JSExpr)
-               ([(k v) (in-hash js)])
-            (values k (json->jsexpr v)))])])))
+       (for/hasheq : (Immutable-HashTable Symbol JSExpr)
+           ([(k v) (in-hash js)])
+         (values k (json->jsexpr v)))])))
 
 (: jsexpr->json [-> JSExpr
                     [#:null JSExpr]
@@ -892,20 +873,17 @@
                        (Symbol
                         #:null JSExpr
                         #:inf+ JSExpr
-                        #:inf- JSExpr
-                        #:mhash? Boolean)
+                        #:inf- JSExpr)
                        (U EOF JSExpr)])
 (define (string->jsexpr str
                         [who 'string->jsexpr]
                         #:null [jsnull (json-null)]
                         #:inf+ [jsinf+ (json-inf+)]
-                        #:inf- [jsinf- (json-inf-)]
-                        #:mhash? [m-hash? (jsexpr-mhash?)])
+                        #:inf- [jsinf- (json-inf-)])
   (define i (open-input-string str))
   (parameterize ([json-null jsnull]
                  [json-inf+ jsinf+]
-                 [json-inf- jsinf-]
-                 [jsexpr-mhash? m-hash?])
+                 [json-inf- jsinf-])
     (define js (read-JSON* who i))
     (if (eof-object? js)
         eof
@@ -915,20 +893,17 @@
                       (Symbol
                        #:null JSExpr
                        #:inf+ JSExpr
-                       #:inf- JSExpr
-                       #:mhash? Boolean)
+                       #:inf- JSExpr)
                       (U EOF JSExpr)])
 (define (bytes->jsexpr bs
                        [who 'bytes->jsexpr]
                        #:null [jsnull (json-null)]
                        #:inf+ [jsinf+ (json-inf+)]
-                       #:inf- [jsinf- (json-inf-)]
-                       #:mhash? [m-hash? (jsexpr-mhash?)])
+                       #:inf- [jsinf- (json-inf-)])
   (define i (open-input-bytes bs))
   (parameterize ([json-null jsnull]
                  [json-inf+ jsinf+]
-                 [json-inf- jsinf-]
-                 [jsexpr-mhash? m-hash?])
+                 [json-inf- jsinf-])
     (define js (read-JSON* who i))
     (if (eof-object? js)
         eof
