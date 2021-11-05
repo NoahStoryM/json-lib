@@ -314,134 +314,136 @@
             ;; Reading a string *could* have been nearly trivial using the racket
             ;; reader, except that it won't handle a "\/"...
             (: read-a-string [-> String])
-            (define (read-a-string)
-              ;; Using a string output port would make sense here, but managing
-              ;; a string buffer directly is even faster
-              (define result (make-string 16))
+            (define read-a-string
+              (let ()
+                (: keep-char [-> Char String Natural (Option Bytes-Converter) String])
+                (define (keep-char c old-result pos converter)
+                  (define result
+                    (cond
+                      [(= pos (string-length old-result))
+                       (define new (make-string (* pos 2)))
+                       (string-copy! new 0 old-result 0 pos)
+                       new]
+                      [else old-result]))
+                  (string-set! result pos c)
+                  (loop result (add1 pos) converter))
 
-              (: keep-char [-> Char String Natural (Option Bytes-Converter) String])
-              (define (keep-char c old-result pos converter)
-                (define result
+                (: loop [-> String Natural (Option Bytes-Converter) String])
+                (define (loop result pos converter)
+                  (define c (read-byte i))
                   (cond
-                    [(= pos (string-length old-result))
-                     (define new (make-string (* pos 2)))
-                     (string-copy! new 0 old-result 0 pos)
-                     new]
-                    [else old-result]))
-                (string-set! result pos c)
-                (loop result (add1 pos) converter))
+                    [(eof-object? c) (err "unterminated string")]
+                    [(byte-char=? c #\") (substring result 0 pos)]
+                    [(byte-char=? c #\\)
+                     (define ch (read-char i))
+                     (if (eof-object? ch)
+                         (err "unexpected end-of-file")
+                         (read-escape ch result pos converter))]
+                    [(c . < . 128) (keep-char (integer->char c) result pos converter)]
+                    [else
+                     ;; need to decode, but we can't un-read the byte, and
+                     ;; also we want to report decoding errors
+                     (define cvtr (or converter
+                                      (assert (bytes-open-converter "UTF-8" "UTF-8") bytes-converter?)))
+                     (define buf (make-bytes 6 c))
 
-              (: loop [-> String Natural (Option Bytes-Converter) String])
-              (define (loop result pos converter)
-                (define c (read-byte i))
-                (cond
-                  [(eof-object? c) (err "unterminated string")]
-                  [(byte-char=? c #\") (substring result 0 pos)]
-                  [(byte-char=? c #\\)
-                   (define ch (read-char i))
-                   (if (eof-object? ch)
-                       (err "unexpected end-of-file")
-                       (read-escape ch result pos converter))]
-                  [(c . < . 128) (keep-char (integer->char c) result pos converter)]
-                  [else
-                   ;; need to decode, but we can't un-read the byte, and
-                   ;; also we want to report decoding errors
-                   (define cvtr (or converter
-                                    (assert (bytes-open-converter "UTF-8" "UTF-8") bytes-converter?)))
-                   (define buf (make-bytes 6 c))
+                     (let utf8-loop : String ([start : Natural 0] [end : Natural 1])
+                          (define-values (wrote-n read-n state)
+                            (bytes-convert cvtr buf start end buf 0 6))
 
-                   (let utf8-loop : String ([start : Natural 0] [end : Natural 1])
-                        (define-values (wrote-n read-n state)
-                          (bytes-convert cvtr buf start end buf 0 6))
-
-                        (case state
-                          [(complete)
-                           (keep-char (bytes-utf-8-ref buf 0) result pos cvtr)]
-                          [(error)
-                           (err "UTF-8 decoding error at ~e" (subbytes buf 0 end))]
-                          [(continues)
-                           (err "no enough space at ~e" buf)]
-                          [(aborts)
-                           (define c (read-byte i))
-                           (cond
-                             [(eof-object? c)
-                              (err "unexpected end-of-file")]
-                             [else
-                              (bytes-set! buf end c)
-                              (utf8-loop (+ start read-n) (add1 end))])]))]))
-
-              (: read-escape [-> Char String Natural (Option Bytes-Converter) String])
-              (define read-escape
-                (let ()
-                   (: get-hex [-> Natural])
-                   (define get-hex
-                     (let ()
-                       (: read-next [-> Byte])
-                       (define (read-next)
-                         (define c (read-byte i))
-                         (when (eof-object? c) (error "unexpected end-of-file"))
-                         c)
-
-                       (λ ()
-                         (define c1 (read-next))
-                         (define c2 (read-next))
-                         (define c3 (read-next))
-                         (define c4 (read-next))
-
-                         (: hex-convert [-> Byte Byte])
-                         (define (hex-convert c)
-                           (assert
-                            (cond
-                              [(<= (char->integer #\0) c (char->integer #\9))
-                               (- c (char->integer #\0))]
-                              [(<= (char->integer #\a) c (char->integer #\f))
-                               (- c (- (char->integer #\a) 10))]
-                              [(<= (char->integer #\A) c (char->integer #\F))
-                               (- c (- (char->integer #\A) 10))]
-                              [else (err "bad \\u escape ~e" (bytes c1 c2 c3 c4))])
-                            byte?))
-
-                         (+ (arithmetic-shift (hex-convert c1) 12)
-                            (arithmetic-shift (hex-convert c2) 8)
-                            (arithmetic-shift (hex-convert c3) 4)
-                            (hex-convert c4)))))
-
-                   (λ (esc result pos converter)
-                     (cond
-                       [(case esc
-                          [(#\b) "\b"]
-                          [(#\n) "\n"]
-                          [(#\r) "\r"]
-                          [(#\f) "\f"]
-                          [(#\t) "\t"]
-                          [(#\\) "\\"]
-                          [(#\") "\""]
-                          [(#\/) "/"]
-                          [else #f])
-                        => (λ (s) (keep-char (string-ref s 0) result pos converter))]
-                       [(eqv? esc #\u)
-                        (define e (get-hex))
-                        (define e*
-                          (cond
-                            [(<= #xD800 e #xDFFF)
-                             (: err-missing [-> Nothing])
-                             (define (err-missing)
-                               (err "bad string \\u escape, missing second half of a UTF-16 pair"))
-                             (unless (eqv? (read-byte i) (char->integer #\\)) (err-missing))
-                             (unless (eqv? (read-byte i) (char->integer #\u)) (err-missing))
-
-                             (define e2 (get-hex))
+                          (case state
+                            [(complete)
+                             (keep-char (bytes-utf-8-ref buf 0) result pos cvtr)]
+                            [(error)
+                             (err "UTF-8 decoding error at ~e" (subbytes buf 0 end))]
+                            [(continues)
+                             (err "no enough space at ~e" buf)]
+                            [(aborts)
+                             (define c (read-byte i))
                              (cond
-                               [(<= #xDC00 e2 #xDFFF)
-                                (+ (arithmetic-shift (- e #xD800) 10) (- e2 #xDC00) #x10000)]
+                               [(eof-object? c)
+                                (err "unexpected end-of-file")]
                                [else
-                                (err "bad string \\u escape, bad second half of a UTF-16 pair")])]
-                            [else e]))
+                                (bytes-set! buf end c)
+                                (utf8-loop (+ start read-n) (add1 end))])]))]))
 
-                        (keep-char (integer->char e*) result pos converter)]
-                       [else (err "bad string escape: \"~a\"" esc)]))))
+                (: read-escape [-> Char String Natural (Option Bytes-Converter) String])
+                (define read-escape
+                  (let ()
+                    (: get-hex [-> Natural])
+                    (define get-hex
+                      (let ()
+                        (: read-next [-> Byte])
+                        (define (read-next)
+                          (define c (read-byte i))
+                          (when (eof-object? c) (error "unexpected end-of-file"))
+                          c)
 
-              (loop result 0 #f))
+                        (λ ()
+                          (define c1 (read-next))
+                          (define c2 (read-next))
+                          (define c3 (read-next))
+                          (define c4 (read-next))
+
+                          (: hex-convert [-> Byte Byte])
+                          (define (hex-convert c)
+                            (assert
+                             (cond
+                               [(<= (char->integer #\0) c (char->integer #\9))
+                                (- c (char->integer #\0))]
+                               [(<= (char->integer #\a) c (char->integer #\f))
+                                (- c (- (char->integer #\a) 10))]
+                               [(<= (char->integer #\A) c (char->integer #\F))
+                                (- c (- (char->integer #\A) 10))]
+                               [else (err "bad \\u escape ~e" (bytes c1 c2 c3 c4))])
+                             byte?))
+
+                          (+ (arithmetic-shift (hex-convert c1) 12)
+                             (arithmetic-shift (hex-convert c2) 8)
+                             (arithmetic-shift (hex-convert c3) 4)
+                             (hex-convert c4)))))
+
+                    (λ (esc result pos converter)
+                      (cond
+                        [(case esc
+                           [(#\b) "\b"]
+                           [(#\n) "\n"]
+                           [(#\r) "\r"]
+                           [(#\f) "\f"]
+                           [(#\t) "\t"]
+                           [(#\\) "\\"]
+                           [(#\") "\""]
+                           [(#\/) "/"]
+                           [else #f])
+                         => (λ (s) (keep-char (string-ref s 0) result pos converter))]
+                        [(eqv? esc #\u)
+                         (define e (get-hex))
+                         (define e*
+                           (cond
+                             [(<= #xD800 e #xDFFF)
+                              (: err-missing [-> Nothing])
+                              (define (err-missing)
+                                (err "bad string \\u escape, missing second half of a UTF-16 pair"))
+                              (unless (eqv? (read-byte i) (char->integer #\\)) (err-missing))
+                              (unless (eqv? (read-byte i) (char->integer #\u)) (err-missing))
+
+                              (define e2 (get-hex))
+                              (cond
+                                [(<= #xDC00 e2 #xDFFF)
+                                 (+ (arithmetic-shift (- e #xD800) 10) (- e2 #xDC00) #x10000)]
+                                [else
+                                 (err "bad string \\u escape, bad second half of a UTF-16 pair")])]
+                             [else e]))
+
+                         (keep-char (integer->char e*) result pos converter)]
+                        [else (err "bad string escape: \"~a\"" esc)]))))
+
+                (λ ()
+                  ;; Using a string output port would make sense here, but managing
+                  ;; a string buffer directly is even faster
+                  (define result (make-string 16))
+
+                  (loop result 0 #f))))
 
             ;;
             (: read-list  (All (A) [-> Symbol Char [-> A] (Listof  A)]))
