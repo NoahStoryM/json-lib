@@ -8,6 +8,8 @@
 ;; -----------------------------------------------------------------------------
 ;; TYPE and PREDICATE
 
+(define-predicate mhash? Mutable-HashTableTop)
+
 (define-type Inexact-Real-Inf (U +inf.0 +inf.f -inf.0 -inf.f))
 (define-predicate inexact-real-inf? Inexact-Real-Inf)
 (define-predicate inexact-real-nan? Inexact-Real-Nan)

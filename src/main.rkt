@@ -32,13 +32,13 @@
  jsexpr-mhash?
 
  ;; Type and Predicate
- Mutable-JSON     mutable-json?
+ Mutable-JSON     mutable-json?   mjson?
  Immutable-JSON   immutable-json?
  JSON             json?
  JSExpr           jsexpr?
 
- JS-MList JS-List json-list?
- JS-MHash JS-Hash json-hash?
+ JS-List json-list? JS-MList json-mlist?
+ JS-Hash json-hash? JS-MHash json-mhash?
 
  JS-Constant json-constant?
 
@@ -75,6 +75,9 @@
   (import)
   (export io^ convert^))
 
+
+;; -----------------------------------------------------------------------------
+;; MORE PREDICATE
 
 (module more racket/base
   (provide mutable-json?)
@@ -121,3 +124,27 @@
           ;; (and (mlist? x) (andmmap loop x)) ; TODO
           (and (hash? x) (for/and ([(k v) (in-hash x)])
                            (and (symbol? k) (loop v))))))))
+
+
+(define-signature pred^
+  ([mjson?      : [-> JSON Boolean : Mutable-JSON]]
+   [json-mlist? : [-> JSON Boolean : JS-MList]]
+   [json-mhash? : [-> JSON Boolean : JS-MHash]]))
+
+(define-unit pred@
+  (import)
+  (export pred^)
+
+  (: mjson? [-> JSON Boolean : Mutable-JSON])
+  (define (mjson? js)
+    (or (json-constant? js)
+        (null? js)
+        (not (immutable-json? js))))
+
+  (: json-mlist? [-> JSON Boolean : JS-MList])
+  (define (json-mlist? js) (or (null? js) (mpair? js)))
+
+  (: json-mhash? [-> JSON Boolean : JS-MHash])
+  (define (json-mhash? js) (mhash? js)))
+
+(define-values/invoke-unit/infer pred@)
