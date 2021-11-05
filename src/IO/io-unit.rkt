@@ -226,6 +226,9 @@
           (define-type Digit-Byte (U #x30 #x31 #x32 #x33 #x34 #x35 #x36 #x37 #x38 #x39))
           (define-predicate digit-byte? Digit-Byte)
 
+          (: byte-char=? [-> Byte Char Boolean])
+          (define (byte-char=? b ch) (eqv? b (char->integer ch)))
+
           (: to-json-number [-> (U JS-Number Inexact-Real)
                                 [#:inf+ JSExpr]
                                 [#:inf- JSExpr]
@@ -240,6 +243,49 @@
                 [(or (eq? n -inf.0) (eq? n (json-inf-))) JSON-inf-]
                 [(json-number? n) n]
                 [(inexact-real-nan? n) (raise-type-error 'to-json-number "json-number?" n)])))
+
+          (: to-number [-> Digit-Byte Byte])
+          (define (to-number c)
+            (assert (- c (char->integer #\0)) byte?))
+
+          (: maybe-bytes [-> (U EOF Byte) Bytes])
+          (define (maybe-bytes c)
+            (if (eof-object? c) #"" (bytes c)))
+
+          ;; evaluate n * 10^exp to inexact? without passing large arguments to expt
+          ;; assumes n is an integer
+          (: safe-exponential->inexact [-> Integer Integer JS-Number])
+          (define (safe-exponential->inexact n exp)
+            (define result-exp
+              (if (= n 0)
+                  exp
+                  (+ (log (abs n) 10) exp)))
+
+            (to-json-number
+             (cond
+               [(< result-exp -400)
+                (cond
+                  [(>= n 0) 0.0]
+                  [else -0.0])]
+               [(> result-exp 400)
+                (cond
+                  [(= n 0) 0.0]
+                  [(> n 0) +inf.0]
+                  [(< n 0) -inf.0])]
+               [else
+                (exact->inexact (* n (expt 10 exp)))])))
+
+          ;; used to reconstruct input for error reporting:
+          (: n->string [-> Integer Integer Bytes])
+          (define (n->string n exp)
+            (define s (number->string n))
+            (string->bytes/utf-8
+             (cond
+               [(zero? exp) s]
+               [else
+                (define m (+ (string-length s) exp))
+                (string-append (substring s 0 m) "." (substring s m))])))
+
 
           (λ (who i #:mutable? mutable?)
             ;; Follows the specification (eg, at json.org) -- no extensions.
@@ -263,9 +309,6 @@
                     (err "found whitespace that is not allowed by the JSON specification\n  char: ~s" ch)]
                    [else ch])]
                 [else ch]))
-
-            (: byte-char=? [-> Byte Char Boolean])
-            (define (byte-char=? b ch) (eqv? b (char->integer ch)))
 
             ;;
             ;; Reading a string *could* have been nearly trivial using the racket
@@ -328,73 +371,75 @@
                               (utf8-loop (+ start read-n) (add1 end))])]))]))
 
               (: read-escape [-> Char String Natural (Option Bytes-Converter) String])
-              (define (read-escape esc result pos converter)
-                (cond
-                  [(case esc
-                     [(#\b) "\b"]
-                     [(#\n) "\n"]
-                     [(#\r) "\r"]
-                     [(#\f) "\f"]
-                     [(#\t) "\t"]
-                     [(#\\) "\\"]
-                     [(#\") "\""]
-                     [(#\/) "/"]
-                     [else #f])
-                   => (λ (s) (keep-char (string-ref s 0) result pos converter))]
-                  [(eqv? esc #\u)
-
+              (define read-escape
+                (let ()
                    (: get-hex [-> Natural])
-                   (define (get-hex)
-                     (: read-next [-> Byte])
-                     (define (read-next)
-                       (define c (read-byte i))
-                       (when (eof-object? c) (error "unexpected end-of-file"))
-                       c)
+                   (define get-hex
+                     (let ()
+                       (: read-next [-> Byte])
+                       (define (read-next)
+                         (define c (read-byte i))
+                         (when (eof-object? c) (error "unexpected end-of-file"))
+                         c)
 
-                     (define c1 (read-next))
-                     (define c2 (read-next))
-                     (define c3 (read-next))
-                     (define c4 (read-next))
+                       (λ ()
+                         (define c1 (read-next))
+                         (define c2 (read-next))
+                         (define c3 (read-next))
+                         (define c4 (read-next))
 
-                     (: hex-convert [-> Byte Byte])
-                     (define (hex-convert c)
-                       (assert
-                        (cond
-                          [(<= (char->integer #\0) c (char->integer #\9))
-                           (- c (char->integer #\0))]
-                          [(<= (char->integer #\a) c (char->integer #\f))
-                           (- c (- (char->integer #\a) 10))]
-                          [(<= (char->integer #\A) c (char->integer #\F))
-                           (- c (- (char->integer #\A) 10))]
-                          [else (err "bad \\u escape ~e" (bytes c1 c2 c3 c4))])
-                        byte?))
+                         (: hex-convert [-> Byte Byte])
+                         (define (hex-convert c)
+                           (assert
+                            (cond
+                              [(<= (char->integer #\0) c (char->integer #\9))
+                               (- c (char->integer #\0))]
+                              [(<= (char->integer #\a) c (char->integer #\f))
+                               (- c (- (char->integer #\a) 10))]
+                              [(<= (char->integer #\A) c (char->integer #\F))
+                               (- c (- (char->integer #\A) 10))]
+                              [else (err "bad \\u escape ~e" (bytes c1 c2 c3 c4))])
+                            byte?))
 
-                     (+ (arithmetic-shift (hex-convert c1) 12)
-                        (arithmetic-shift (hex-convert c2) 8)
-                        (arithmetic-shift (hex-convert c3) 4)
-                        (hex-convert c4)))
+                         (+ (arithmetic-shift (hex-convert c1) 12)
+                            (arithmetic-shift (hex-convert c2) 8)
+                            (arithmetic-shift (hex-convert c3) 4)
+                            (hex-convert c4)))))
 
-
-                   (define e (get-hex))
-                   (define e*
+                   (λ (esc result pos converter)
                      (cond
-                       [(<= #xD800 e #xDFFF)
-                        (: err-missing [-> Nothing])
-                        (define (err-missing)
-                          (err "bad string \\u escape, missing second half of a UTF-16 pair"))
-                        (unless (eqv? (read-byte i) (char->integer #\\)) (err-missing))
-                        (unless (eqv? (read-byte i) (char->integer #\u)) (err-missing))
+                       [(case esc
+                          [(#\b) "\b"]
+                          [(#\n) "\n"]
+                          [(#\r) "\r"]
+                          [(#\f) "\f"]
+                          [(#\t) "\t"]
+                          [(#\\) "\\"]
+                          [(#\") "\""]
+                          [(#\/) "/"]
+                          [else #f])
+                        => (λ (s) (keep-char (string-ref s 0) result pos converter))]
+                       [(eqv? esc #\u)
+                        (define e (get-hex))
+                        (define e*
+                          (cond
+                            [(<= #xD800 e #xDFFF)
+                             (: err-missing [-> Nothing])
+                             (define (err-missing)
+                               (err "bad string \\u escape, missing second half of a UTF-16 pair"))
+                             (unless (eqv? (read-byte i) (char->integer #\\)) (err-missing))
+                             (unless (eqv? (read-byte i) (char->integer #\u)) (err-missing))
 
-                        (define e2 (get-hex))
-                        (cond
-                          [(<= #xDC00 e2 #xDFFF)
-                           (+ (arithmetic-shift (- e #xD800) 10) (- e2 #xDC00) #x10000)]
-                          [else
-                           (err "bad string \\u escape, bad second half of a UTF-16 pair")])]
-                       [else e]))
+                             (define e2 (get-hex))
+                             (cond
+                               [(<= #xDC00 e2 #xDFFF)
+                                (+ (arithmetic-shift (- e #xD800) 10) (- e2 #xDC00) #x10000)]
+                               [else
+                                (err "bad string \\u escape, bad second half of a UTF-16 pair")])]
+                            [else e]))
 
-                   (keep-char (integer->char e*) result pos converter)]
-                  [else (err "bad string escape: \"~a\"" esc)]))
+                        (keep-char (integer->char e*) result pos converter)]
+                       [else (err "bad string escape: \"~a\"" esc)]))))
 
               (loop result 0 #f))
 
@@ -506,48 +551,6 @@
                    (read-integer -1)]
                   [else
                    (read-integer 1)]))
-
-              (: to-number [-> Digit-Byte Byte])
-              (define (to-number c)
-                (assert (- c (char->integer #\0)) byte?))
-
-              (: maybe-bytes [-> (U EOF Byte) Bytes])
-              (define (maybe-bytes c)
-                (if (eof-object? c) #"" (bytes c)))
-
-              ;; evaluate n * 10^exp to inexact? without passing large arguments to expt
-              ;; assumes n is an integer
-              (: safe-exponential->inexact [-> Integer Integer JS-Number])
-              (define (safe-exponential->inexact n exp)
-                (define result-exp
-                  (if (= n 0)
-                      exp
-                      (+ (log (abs n) 10) exp)))
-
-                (to-json-number
-                 (cond
-                   [(< result-exp -400)
-                    (cond
-                      [(>= n 0) 0.0]
-                      [else -0.0])]
-                   [(> result-exp 400)
-                    (cond
-                      [(= n 0) 0.0]
-                      [(> n 0) +inf.0]
-                      [(< n 0) -inf.0])]
-                   [else
-                    (exact->inexact (* n (expt 10 exp)))])))
-
-              ;; used to reconstruct input for error reporting:
-              (: n->string [-> Integer Integer Bytes])
-              (define (n->string n exp)
-                (define s (number->string n))
-                (string->bytes/utf-8
-                 (cond
-                   [(zero? exp) s]
-                   [else
-                    (define m (+ (string-length s) exp))
-                    (string-append (substring s 0 m) "." (substring s m))])))
 
               ;; need at least one digit:
               (: read-integer [-> SGN JS-Number])
