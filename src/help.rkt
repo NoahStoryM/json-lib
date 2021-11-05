@@ -2,6 +2,7 @@
 
 (provide mmap
          ;; andmmap
+         ;; ormmap
          mreverse
          list->mlist
          mlist->list)
@@ -12,10 +13,15 @@
   (let loop ([l l] [res : (MListof B) '()])
     (if (null? l) res (loop (mcdr l) (mcons (f (mcar l)) res)))))
 
-;; (: andmmap (All (A B) [-> [-> A B] (MListof A) (U Boolean B)]))
+;; (: andmmap (All (A B) [-> [-> A B] (MListof A) (U True  B)]))
 ;; (define (andmmap f l)
 ;;   (let loop ([l l])
 ;;     (if (null? l) #t (and (f (mcar l)) (loop (mcdr l))))))
+
+;; (: ormmap  (All (A B) [-> [-> A B] (MListof A) (U False B)]))
+;; (define (ormmap  f l)
+;;   (let loop ([l l])
+;;     (if (null? l) #f (or (f (mcar l)) (loop (mcdr l))))))
 
 (: mreverse (All (A) [-> (MListof A) (MListof A)]))
 (define (mreverse l)
