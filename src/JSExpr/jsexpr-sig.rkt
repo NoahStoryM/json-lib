@@ -3,36 +3,43 @@
 (require typed/racket/unit
          "../types.rkt")
 
-(provide convert^)
+(provide jsexpr^)
 
 
-(define-signature convert^
+(define-signature jsexpr^
   (
+   ;; Predicate
+   [jsexpr? : [-> Any
+                  [#:null JSExpr]
+                  [#:inf+ JSExpr]
+                  [#:inf- JSExpr]
+                  Boolean]]
+
+   ;; IO
+   [write-jsexpr : [->* (JSExpr)
+                        (Output-Port
+                         Symbol
+                         #:null JSExpr
+                         #:inf+ JSExpr
+                         #:inf- JSExpr
+                         #:encode Encode)
+                        Void]]
+   [read-jsexpr  : [->* ()
+                        (Input-Port
+                         Symbol
+                         #:null JSExpr
+                         #:inf+ JSExpr
+                         #:inf- JSExpr
+                         #:mhash? Boolean)
+                        JSExpr]]
+
+   ;; Conversion
    [json->jsexpr   : [-> JSON
                          [#:null JSExpr]
                          [#:inf+ JSExpr]
                          [#:inf- JSExpr]
                          [#:mhash? Boolean]
                          JSExpr]]
-   [jsexpr->json   : (case-> [-> JSExpr
-                                 #:mutable? False
-                                 [#:null JSExpr]
-                                 [#:inf+ JSExpr]
-                                 [#:inf- JSExpr]
-                                 Immutable-JSON]
-                             [-> JSExpr
-                                 #:mutable? True
-                                 [#:null JSExpr]
-                                 [#:inf+ JSExpr]
-                                 [#:inf- JSExpr]
-                                 Mutable-JSON])]
-
-   [json->string   : [->* (JSON) (Symbol #:encode Encode) String]]
-   [json->bytes    : [->* (JSON) (Symbol #:encode Encode) Bytes]]
-   [string->json   : (case-> [->* (String #:mutable? False) (Symbol) (U EOF Immutable-JSON)]
-                             [->* (String #:mutable? True ) (Symbol) (U EOF Mutable-JSON)])]
-   [bytes->json    : (case-> [->* (Bytes #:mutable? False) (Symbol) (U EOF Immutable-JSON)]
-                             [->* (Bytes #:mutable? True ) (Symbol) (U EOF Mutable-JSON)])]
 
    [jsexpr->string : [->* (JSExpr)
                           (Symbol

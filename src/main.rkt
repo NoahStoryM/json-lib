@@ -14,8 +14,10 @@
          "types.rkt"
          "IO/io-sig.rkt"
          "IO/io-unit.rkt"
-         "Conversion/convert-sig.rkt"
-         "Conversion/convert-unit.rkt")
+         "JSON/json-sig.rkt"
+         "JSON/json-unit.rkt"
+         "JSExpr/jsexpr-sig.rkt"
+         "JSExpr/jsexpr-unit.rkt")
 
 ;; tests in:
 ;; ~plt/pkgs/racket-test/tests/json/
@@ -68,16 +70,16 @@
 
 (define-compound-unit/infer base@
   (import)
-  (export io^ convert^)
-  (link   io@ convert@))
+  (export io^ json^ jsexpr^)
+  (link   io@ json@ jsexpr@))
 
 (define-values/invoke-unit base@
   (import)
-  (export io^ convert^))
+  (export io^ json^ jsexpr^))
 
 
 ;; -----------------------------------------------------------------------------
-;; MORE PREDICATE
+;; PREDICATE
 
 (module more racket/base
   (provide mutable-json?)
@@ -92,9 +94,6 @@
              (for/and ([(k v) (in-hash x)])
                (and (symbol? k) (mutable-json? v))))))
 
-  ;; -----------------------------------------------------------------------------
-  ;; CONVENIENCE
-
   (define (andmmap f l)
     (let loop ([l l])
       (if (null? l) #t (and (f (mcar l)) (loop (mcdr l)))))))
@@ -102,49 +101,3 @@
 
 (: json? [-> Any Boolean])
 (define (json? x) (or (immutable-json? x) (mutable-json? x)))
-
-(: jsexpr? [-> Any
-               [#:null JSExpr]
-               [#:inf+ JSExpr]
-               [#:inf- JSExpr]
-               Boolean])
-(define (jsexpr? x
-                 #:null [jsnull (json-null)]
-                 #:inf+ [jsinf+ (json-inf+)]
-                 #:inf- [jsinf- (json-inf-)])
-  (parameterize ([json-null jsnull]
-                 [json-inf+ jsinf+]
-                 [json-inf- jsinf-])
-    (let loop ([x x])
-      (or (equal? x json-inf+) (eq? x (json-inf+))
-          (equal? x json-inf-) (eq? x (json-inf-))
-          (equal? x json-null) (eq? x (json-null))
-          (json-constant? x)
-          (and (list?  x) (andmap  loop x))
-          ;; (and (mlist? x) (andmmap loop x)) ; TODO
-          (and (hash? x) (for/and ([(k v) (in-hash x)])
-                           (and (symbol? k) (loop v))))))))
-
-
-(define-signature pred^
-  ([mjson?      : [-> JSON Boolean : Mutable-JSON]]
-   [json-mlist? : [-> JSON Boolean : JS-MList]]
-   [json-mhash? : [-> JSON Boolean : JS-MHash]]))
-
-(define-unit pred@
-  (import)
-  (export pred^)
-
-  (: mjson? [-> JSON Boolean : Mutable-JSON])
-  (define (mjson? js)
-    (or (json-constant? js)
-        (json-mlist? js)
-        (json-mhash? js)))
-
-  (: json-mlist? [-> JSON Boolean : JS-MList])
-  (define (json-mlist? js) (or (null? js) (mpair? js)))
-
-  (: json-mhash? [-> JSON Boolean : JS-MHash])
-  (define (json-mhash? js) (mhash? js)))
-
-(define-values/invoke-unit/infer pred@)

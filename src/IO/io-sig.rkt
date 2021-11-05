@@ -8,30 +8,7 @@
 
 (define-signature io^
   (
-   [write-JSON : [->* (JSON)
-                      (Output-Port Symbol #:encode Encode)
-                      Void]]
-   [read-JSON  : (case-> [->* (#:mutable? False)
-                              (Input-Port Symbol)
-                              (U EOF Immutable-JSON)]
-                         [->* (#:mutable? True)
-                              (Input-Port Symbol)
-                              (U EOF Mutable-JSON)])]
-
-   [write-jsexpr : [->* (JSExpr)
-                        (Output-Port
-                         Symbol
-                         #:null JSExpr
-                         #:inf+ JSExpr
-                         #:inf- JSExpr
-                         #:encode Encode)
-                        Void]]
-   [read-jsexpr  : [->* ()
-                        (Input-Port
-                         Symbol
-                         #:null JSExpr
-                         #:inf+ JSExpr
-                         #:inf- JSExpr
-                         #:mhash? Boolean)
-                        JSExpr]]
+   [write-JSON* : [-> Symbol JSON Output-Port Encode Void]]
+   [read-JSON*  : (case-> [-> Symbol Input-Port #:mutable? False (U EOF Immutable-JSON)]
+                          [-> Symbol Input-Port #:mutable? True  (U EOF Mutable-JSON)])]
    ))
