@@ -2,13 +2,27 @@
 
 (require typed/racket/unit
          "../types.rkt"
-         "../help.rkt"
+         "../typed-help.rkt"
          "../IO/io-sig.rkt"
          "../JSON/json-sig.rkt"
          "jsexpr-sig.rkt")
 
 (provide jsexpr@)
 
+(require/typed "untyped.rkt"
+  [[jsexpr? untyped/jsexpr?]
+   [-> Any
+       [#:null JSExpr]
+       [#:inf+ JSExpr]
+       [#:inf- JSExpr]
+       Boolean]]
+  [[jsexpr-copy untyped/jsexpr-copy]
+   [-> JSExpr
+       [#:null JSExpr]
+       [#:inf+ JSExpr]
+       [#:inf- JSExpr]
+       [#:mhash? Boolean]
+       JSExpr]])
 
 (define-unit jsexpr@
   (import io^ json^)
@@ -22,22 +36,7 @@
                  [#:inf+ JSExpr]
                  [#:inf- JSExpr]
                  Boolean])
-  (define (jsexpr? x
-                   #:null [jsnull (json-null)]
-                   #:inf+ [jsinf+ (json-inf+)]
-                   #:inf- [jsinf- (json-inf-)])
-    (parameterize ([json-null jsnull]
-                   [json-inf+ jsinf+]
-                   [json-inf- jsinf-])
-      (let loop ([x x])
-        (or (equal? x json-inf+) (eq? x (json-inf+))
-            (equal? x json-inf-) (eq? x (json-inf-))
-            (equal? x json-null) (eq? x (json-null))
-            (json-constant? x)
-            (and (list?  x) (andmap  loop x))
-            ;; (and (mlist? x) (andmmap loop x)) ; TODO
-            (and (hash? x) (for/and ([(k v) (in-hash x)])
-                             (and (symbol? k) (loop v))))))))
+  (define jsexpr? untyped/jsexpr?)
 
   ;; -----------------------------------------------------------------------------
   ;; GENERATION  (from Racket to JSON)
@@ -97,34 +96,7 @@
                      [#:inf- JSExpr]
                      [#:mhash? Boolean]
                      JSExpr])
-  (define (jsexpr-copy x
-                       #:null   [jsnull   (json-null)]
-                       #:inf+   [jsinf+   (json-inf+)]
-                       #:inf-   [jsinf-   (json-inf-)]
-                       #:mhash? [jsmhash? (jsexpr-mhash?)])
-    (parameterize ([json-null jsnull]
-                   [json-inf+ jsinf+]
-                   [json-inf- jsinf-]
-                   [jsexpr-mhash? jsmhash?])
-      (cond
-        [(or (eq? x (json-inf+)) (equal? x json-inf+)) x]
-        [(or (eq? x (json-inf-)) (equal? x json-inf-)) x]
-        [(or (eq? x (json-null)) (equal? x json-null)) x]
-        [(json-constant? x) x]
-        [(list? x)  (map jsexpr-copy x)]
-        ;; [(mpair? x) ...] ; TODO
-        [(hash? x)
-         (cond
-           [(jsexpr-mhash?)
-            (: result (Mutable-HashTable Symbol JSExpr))
-            (define result (make-hasheq))
-            (for ([(k v) (in-hash x)])
-              (hash-set! result (assert k symbol?) (jsexpr-copy v)))
-            result]
-           [else
-            (for/hasheq : (Immutable-HashTable Symbol JSExpr)
-                ([(k v) (in-hash x)])
-              (values (assert k symbol?) (jsexpr-copy v)))])])))
+  (define jsexpr-copy untyped/jsexpr-copy)
 
   (: json->jsexpr [-> JSON
                       [#:null JSExpr]

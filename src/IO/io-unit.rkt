@@ -2,7 +2,7 @@
 
 (require typed/racket/unit
          "../types.rkt"
-         "../help.rkt"
+         "../typed-help.rkt"
          "../JSON/json-sig.rkt"
          "io-sig.rkt")
 

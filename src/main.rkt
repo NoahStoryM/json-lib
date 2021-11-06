@@ -84,8 +84,8 @@
 
 (module more racket/base
   (provide mutable-json?)
-  (require (only-in compatibility/mlist mlist?)
-           "types.rkt")
+  (require "types.rkt"
+           "untyped-help.rkt")
 
   (define (mutable-json? x)
     (or (json-constant? x)
