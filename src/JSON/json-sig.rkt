@@ -11,7 +11,7 @@
    ;; Predicate
    [mjson?      : [-> JSON Boolean : Mutable-JSON]]
    [json-mlist? : [-> JSON Boolean : JS-MList]]
-   [json-mhash? : [-> JSON Boolean : JS-MHash]]
+   [json-mhash? : [-> (U EOF JSON) Boolean : JS-MHash]]
 
    ;; IO
    [write-JSON : [->* (JSON) (Output-Port Symbol #:encode Encode) Void]]

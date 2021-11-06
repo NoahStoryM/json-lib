@@ -15,6 +15,7 @@
 
   ;; -----------------------------------------------------------------------------
   ;; MORE PREDICATE
+
   (: mjson? [-> JSON Boolean : Mutable-JSON])
   (define (mjson? js)
     (or (json-constant? js)
@@ -24,8 +25,21 @@
   (: json-mlist? [-> JSON Boolean : JS-MList])
   (define (json-mlist? js) (or (null? js) (mpair? js)))
 
-  (: json-mhash? [-> JSON Boolean : JS-MHash])
-  (define (json-mhash? js) (mhash? js))
+  ;;; TODO
+  ;; (: mjson? [-> (U EOF JSON) Boolean : Mutable-JSON])
+  ;; (define (mjson? js)
+  ;;   (and (not (eof-object? js))
+  ;;        (or (json-constant? js)
+  ;;            (json-mhash? js)
+  ;;            (json-mlist? js))))
+
+  ;; (: json-mlist? [-> (U EOF JSON) Boolean : JS-MList])
+  ;; (define (json-mlist? js)
+  ;;   (and (not (eof-object? js))
+  ;;        (or (null? js) (mpair? js))))
+
+  (: json-mhash? [-> (U EOF JSON) Boolean : JS-MHash])
+  (define (json-mhash? js) (and (not (eof-object? js)) (mhash? js)))
 
   ;; -----------------------------------------------------------------------------
   ;; GENERATION  (from Racket to JSON)
