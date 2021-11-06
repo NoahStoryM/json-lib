@@ -58,6 +58,7 @@
  read-jsexpr  (rename-out [read-jsexpr  read-json])
 
  ;; Conversion Functions
+ json-copy    jsexpr-copy
  json->jsexpr jsexpr->json
 
  json->string string->json

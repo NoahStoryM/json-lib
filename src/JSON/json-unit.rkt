@@ -4,13 +4,14 @@
          "../types.rkt"
          "../help.rkt"
          "../IO/io-sig.rkt"
+         "../JSExpr/jsexpr-sig.rkt"
          "json-sig.rkt")
 
 (provide json@)
 
 
 (define-unit json@
-  (import io^)
+  (import io^ jsexpr^)
   (export json^)
 
   ;; -----------------------------------------------------------------------------
@@ -62,6 +63,44 @@
   ;; -----------------------------------------------------------------------------
   ;; CONVERSION
 
+  (: json-copy (case-> [-> JSON #:mutable? False Immutable-JSON]
+                       [-> JSON #:mutable? True  Mutable-JSON]))
+  (define json-copy
+    (let ()
+      (: copy-immutable-json [-> JSON Immutable-JSON])
+      (define (copy-immutable-json js)
+        (cond
+          [(immutable-json? js) js]
+          [(json-mlist? js) (mlist->list (mmap copy-immutable-json js))]
+          [(json-mhash? js)
+           (for/hasheq : JS-Hash
+               ([(k v) (in-hash js)])
+             (values k (copy-immutable-json v)))]))
+
+      (: copy-mutable-json [-> JSON Mutable-JSON])
+      (define (copy-mutable-json js)
+        (cond
+          [(json-constant? js) js]
+          [(json-list?  js) (mmap copy-mutable-json (list->mlist js))]
+          [(json-mlist? js) (mmap copy-mutable-json js)]
+          [(json-hash? js)
+           (: result JS-MHash)
+           (define result (make-hasheq))
+           (for ([(k v) (in-hash js)])
+             (hash-set! result k (copy-mutable-json v)))
+           result]
+          [(json-mhash? js)
+           (: result JS-MHash)
+           (define result (make-hasheq))
+           (for ([(k v) (in-hash js)])
+             (hash-set! result k (copy-mutable-json v)))
+           result]
+          [else (raise-type-error 'copy-mutable-json "json?" js)]))
+
+      (λ (js #:mutable? mutable?)
+        (cond [(eq? #f mutable?) (copy-immutable-json js)]
+              [(eq? #t mutable?) (copy-mutable-json   js)]))))
+
   (: jsexpr->json (case-> [-> JSExpr
                               #:mutable? False
                               [#:null JSExpr]
@@ -74,37 +113,49 @@
                               [#:inf+ JSExpr]
                               [#:inf- JSExpr]
                               Mutable-JSON]))
-  (define (jsexpr->json x
-                        #:mutable? mutable?
-                        #:null     [jsnull (json-null)]
-                        #:inf+     [jsinf+ (json-inf+)]
-                        #:inf-     [jsinf- (json-inf-)])
-    (parameterize ([json-null jsnull]
-                   [json-inf+ jsinf+]
-                   [json-inf- jsinf-])
-      (cond
-        [(or (eq? x (json-inf+)) (equal? x json-inf+)) JSON-inf+]
-        [(or (eq? x (json-inf-)) (equal? x json-inf-)) JSON-inf-]
-        [(or (eq? x (json-null)) (equal? x json-null)) JSON-null]
-        [(json-constant? x) x]
-        [(eq? #f mutable?)
-         (cond [(list? x) (map (λ (arg) (jsexpr->json arg #:mutable? #f)) x)]
-               ;; [(mpair? x) (mlist->list (mmap (λ (arg) (jsexpr->json arg #:mutable? #f)) x))] ; TODO
-               [(hash? x)
-                (for/hasheq : JS-Hash
-                    ([(k v) (in-hash x)])
-                  (values (assert k symbol?) (jsexpr->json v #:mutable? #f)))]
-               [else (raise-type-error 'jsexpr->json "jsexpr?" x)])]
-        [(eq? #t mutable?)
-         (cond [(list? x) (list->mlist (map (λ (arg) (jsexpr->json arg #:mutable? #t)) x))]
-               ;; [(mpair? x) (mmap (λ (arg) (jsexpr->json arg #:mutable? #t)) x)] ; TODO
-               [(hash? x)
-                (: result JS-MHash)
-                (define result (make-hasheq))
-                (for ([(k v) (in-hash x)])
-                  (hash-set! result (assert k symbol?) (jsexpr->json v #:mutable? #t)))
-                result]
-               [else (raise-type-error 'jsexpr->json "jsexpr?" x)])])))
+  (define jsexpr->json
+    (let ()
+      (: jsexpr->immutable-json [-> JSExpr Immutable-JSON])
+      (define (jsexpr->immutable-json x)
+        (cond
+          [(or (eq? x (json-inf+)) (equal? x json-inf+)) JSON-inf+]
+          [(or (eq? x (json-inf-)) (equal? x json-inf-)) JSON-inf-]
+          [(or (eq? x (json-null)) (equal? x json-null)) JSON-null]
+          [(json-constant? x) x]
+          [(list? x)  (map jsexpr->immutable-json x)]
+          ;; [(mpair? x) (map jsexpr->immutable-json (jsexpr-copy x #:mlist? #f))] ; TODO
+          [(hash? x)
+           (for/hasheq : JS-Hash
+               ([(k v) (in-hash x)])
+             (values (assert k symbol?) (jsexpr->immutable-json v)))]
+          [else (raise-type-error 'jsexpr->immutable-json "jsexpr?" x)]))
+
+      (: jsexpr->mutable-json   [-> JSExpr Mutable-JSON])
+      (define (jsexpr->mutable-json x)
+        (cond
+          [(or (eq? x (json-inf+)) (equal? x json-inf+)) JSON-inf+]
+          [(or (eq? x (json-inf-)) (equal? x json-inf-)) JSON-inf-]
+          [(or (eq? x (json-null)) (equal? x json-null)) JSON-null]
+          [(json-constant? x) x]
+          [(list? x)  (list->mlist (map jsexpr->mutable-json x))]
+          ;; [(mpair? x) (list->mlist (map jsexpr->mutable-json (jsexpr-copy x #:mlist? #f)))] ; TODO
+          [(hash? x)
+           (: result JS-MHash)
+           (define result (make-hasheq))
+           (for ([(k v) (in-hash x)])
+             (hash-set! result (assert k symbol?) (jsexpr->mutable-json v)))
+           result]
+          [else (raise-type-error 'jsexpr->mutable-json "jsexpr?" x)]))
+
+      (λ (x #:mutable? mutable?
+             #:null     [jsnull (json-null)]
+             #:inf+     [jsinf+ (json-inf+)]
+             #:inf-     [jsinf- (json-inf-)])
+        (parameterize ([json-null jsnull]
+                       [json-inf+ jsinf+]
+                       [json-inf- jsinf-])
+          (cond [(eq? #f mutable?) (jsexpr->immutable-json x)]
+                [(eq? #t mutable?) (jsexpr->mutable-json   x)])))))
 
 
   (: json->string [->* (JSON) (Symbol #:encode Encode) String])

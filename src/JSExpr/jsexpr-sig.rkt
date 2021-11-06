@@ -34,6 +34,12 @@
                         JSExpr]]
 
    ;; Conversion
+   [jsexpr-copy    : [-> JSExpr
+                         [#:null JSExpr]
+                         [#:inf+ JSExpr]
+                         [#:inf- JSExpr]
+                         [#:mhash? Boolean]
+                         JSExpr]]
    [json->jsexpr   : [-> JSON
                          [#:null JSExpr]
                          [#:inf+ JSExpr]
