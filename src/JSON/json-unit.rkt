@@ -148,9 +148,9 @@
           [else (raise-type-error 'jsexpr->mutable-json "jsexpr?" x)]))
 
       (λ (x #:mutable? mutable?
-             #:null     [jsnull (json-null)]
-             #:inf+     [jsinf+ (json-inf+)]
-             #:inf-     [jsinf- (json-inf-)])
+            #:null     [jsnull (json-null)]
+            #:inf+     [jsinf+ (json-inf+)]
+            #:inf-     [jsinf- (json-inf-)])
         (parameterize ([json-null jsnull]
                        [json-inf+ jsinf+]
                        [json-inf- jsinf-])
