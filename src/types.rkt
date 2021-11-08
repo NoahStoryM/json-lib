@@ -74,5 +74,8 @@
 (define JSON-inf- (js-inf-))
 
 
+(: jsexpr-mlist? (Parameter Boolean))
+(define jsexpr-mlist? (make-parameter #f))
+
 (: jsexpr-mhash? (Parameter Boolean))
 (define jsexpr-mhash? (make-parameter #f))

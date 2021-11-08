@@ -31,7 +31,7 @@
 (provide
  ;; Parameter
  json-null json-inf+ json-inf-
- jsexpr-mhash?
+ jsexpr-mlist? jsexpr-mhash?
 
  ;; Type and Predicate
  Mutable-JSON   mutable-json?   mjson?

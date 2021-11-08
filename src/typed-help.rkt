@@ -1,6 +1,8 @@
 #lang typed/racket/base
 
 (provide mmap
+         mmap->list
+         map->mlist
          ;; andmmap
          ;; ormmap
          mreverse
@@ -12,6 +14,16 @@
 (define (mmap f l)
   (let loop ([l l] [res : (MListof B) '()])
     (if (null? l) res (loop (mcdr l) (mcons (f (mcar l)) res)))))
+
+(: mmap->list (All (A B) [-> [-> A B] (MListof A) (Listof B)]))
+(define (mmap->list f l)
+  (let loop ([l l] [res : (Listof B) '()])
+    (if (null? l) res (loop (mcdr l) (cons (f (mcar l)) res)))))
+
+(: map->mlist (All (A B) [-> [-> A B] (Listof A) (MListof B)]))
+(define (map->mlist f l)
+  (let loop ([l l] [res : (MListof B) '()])
+    (if (null? l) res (loop (cdr l) (mcons (f (car l)) res)))))
 
 ;; (: andmmap (All (A B) [-> [-> A B] (MListof A) (U True  B)]))
 ;; (define (andmmap f l)

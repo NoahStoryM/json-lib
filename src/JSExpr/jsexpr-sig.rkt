@@ -30,6 +30,7 @@
                          #:null JSExpr
                          #:inf+ JSExpr
                          #:inf- JSExpr
+                         #:mlist? Boolean
                          #:mhash? Boolean)
                         JSExpr]]
 
@@ -38,12 +39,14 @@
                          [#:null JSExpr]
                          [#:inf+ JSExpr]
                          [#:inf- JSExpr]
+                         [#:mlist? Boolean]
                          [#:mhash? Boolean]
                          JSExpr]]
    [json->jsexpr   : [-> JSON
                          [#:null JSExpr]
                          [#:inf+ JSExpr]
                          [#:inf- JSExpr]
+                         [#:mlist? Boolean]
                          [#:mhash? Boolean]
                          JSExpr]]
 
@@ -66,6 +69,7 @@
                            #:null JSExpr
                            #:inf+ JSExpr
                            #:inf- JSExpr
+                           #:mlist? Boolean
                            #:mhash? Boolean)
                           (U EOF JSExpr)]]
    [bytes->jsexpr  : [->* (Bytes)
@@ -73,6 +77,7 @@
                            #:null JSExpr
                            #:inf+ JSExpr
                            #:inf- JSExpr
+                           #:mlist? Boolean
                            #:mhash? Boolean)
                           (U EOF JSExpr)]]
    ))

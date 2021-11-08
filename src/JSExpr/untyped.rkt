@@ -37,24 +37,33 @@
                    [#:null JSExpr]
                    [#:inf+ JSExpr]
                    [#:inf- JSExpr]
+                   [#:mlist? Boolean]
                    [#:mhash? Boolean]
                    JSExpr])
 (define (jsexpr-copy x
                      #:null   [jsnull   (json-null)]
                      #:inf+   [jsinf+   (json-inf+)]
                      #:inf-   [jsinf-   (json-inf-)]
+                     #:mlist? [jsmlist? (jsexpr-mlist?)]
                      #:mhash? [jsmhash? (jsexpr-mhash?)])
   (parameterize ([json-null jsnull]
                  [json-inf+ jsinf+]
                  [json-inf- jsinf-]
+                 [jsexpr-mlist? jsmlist?]
                  [jsexpr-mhash? jsmhash?])
     (cond
       [(or (eq? x (json-inf+)) (equal? x json-inf+)) x]
       [(or (eq? x (json-inf-)) (equal? x json-inf-)) x]
       [(or (eq? x (json-null)) (equal? x json-null)) x]
       [(json-constant? x) x]
-      [(list? x)  (for/list ([x (in-list  x)]) (jsexpr-copy x))]
-      [(mpair? x) (for/list ([x (in-mlist x)]) (jsexpr-copy x))]
+      [(list? x)
+       (if (jsexpr-mlist?)
+           (map->mlist jsexpr-copy x)
+           (map jsexpr-copy x))]
+      [(mpair? x)
+       (if (jsexpr-mlist?)
+           (mmap jsexpr-copy x)
+           (mmap->list jsexpr-copy x))]
       [(hash? x)
        (cond
          [(jsexpr-mhash?)

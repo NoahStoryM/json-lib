@@ -21,6 +21,7 @@
        [#:null JSExpr]
        [#:inf+ JSExpr]
        [#:inf- JSExpr]
+       [#:mlist? Boolean]
        [#:mhash? Boolean]
        JSExpr]])
 
@@ -70,6 +71,7 @@
                        #:null JSExpr
                        #:inf+ JSExpr
                        #:inf- JSExpr
+                       #:mlist? Boolean
                        #:mhash? Boolean)
                       JSExpr])
   (define (read-jsexpr [i (current-input-port)]
@@ -77,10 +79,12 @@
                        #:null   [jsnull (json-null)]
                        #:inf+   [jsinf+ (json-inf+)]
                        #:inf-   [jsinf- (json-inf-)]
+                       #:mlist? [jsmlist? (jsexpr-mlist?)]
                        #:mhash? [jsmhash? (jsexpr-mhash?)])
     (parameterize ([json-null jsnull]
                    [json-inf+ jsinf+]
                    [json-inf- jsinf-]
+                   [jsexpr-mlist? jsmlist?]
                    [jsexpr-mhash? jsmhash?])
       (define js (read-JSON* who i #:mutable? #f))
       (if (eof-object? js)
@@ -94,6 +98,7 @@
                      [#:null JSExpr]
                      [#:inf+ JSExpr]
                      [#:inf- JSExpr]
+                     [#:mlist? Boolean]
                      [#:mhash? Boolean]
                      JSExpr])
   (define jsexpr-copy untyped/jsexpr-copy)
@@ -102,16 +107,19 @@
                       [#:null JSExpr]
                       [#:inf+ JSExpr]
                       [#:inf- JSExpr]
+                      [#:mlist? Boolean]
                       [#:mhash? Boolean]
                       JSExpr])
   (define (json->jsexpr js
                         #:null   [jsnull   (json-null)]
                         #:inf+   [jsinf+   (json-inf+)]
                         #:inf-   [jsinf-   (json-inf-)]
+                        #:mlist? [jsmlist? (jsexpr-mlist?)]
                         #:mhash? [jsmhash? (jsexpr-mhash?)])
     (parameterize ([json-null jsnull]
                    [json-inf+ jsinf+]
                    [json-inf- jsinf-]
+                   [jsexpr-mlist? jsmlist?]
                    [jsexpr-mhash? jsmhash?])
       (cond
         [(json-constant? js)
@@ -120,7 +128,10 @@
                [(js-null? js) (json-null)]
                [else js])]
         [(immutable-json? js)
-         (cond [(json-list? js) (map json->jsexpr js)]
+         (cond [(json-list? js)
+                (if (jsexpr-mlist?)
+                    (map->mlist json->jsexpr js)
+                    (map json->jsexpr js))]
                [(json-hash? js)
                 (cond
                   [(jsexpr-mhash?)
@@ -135,7 +146,10 @@
                      (values k (json->jsexpr v)))])])]
         [else
          (cond [(null? js) '()]
-               [(mpair? js) (mlist->list (mmap json->jsexpr js))]
+               [(mpair? js)
+                (if (jsexpr-mlist?)
+                    (mmap json->jsexpr js)
+                    (mmap->list json->jsexpr js))]
                [(hash? js)
                 (cond
                   [(jsexpr-mhash?)
@@ -191,6 +205,7 @@
                           #:null JSExpr
                           #:inf+ JSExpr
                           #:inf- JSExpr
+                          #:mlist? Boolean
                           #:mhash? Boolean)
                          (U EOF JSExpr)])
   (define (string->jsexpr str
@@ -198,11 +213,13 @@
                           #:null [jsnull (json-null)]
                           #:inf+ [jsinf+ (json-inf+)]
                           #:inf- [jsinf- (json-inf-)]
+                          #:mlist? [jsmlist? (jsexpr-mlist?)]
                           #:mhash? [jsmhash? (jsexpr-mhash?)])
     (define i (open-input-string str))
     (parameterize ([json-null jsnull]
                    [json-inf+ jsinf+]
                    [json-inf- jsinf-]
+                   [jsexpr-mlist? jsmlist?]
                    [jsexpr-mhash? jsmhash?])
       (define js (read-JSON i who #:mutable? #f))
       (if (eof-object? js)
@@ -214,6 +231,7 @@
                          #:null JSExpr
                          #:inf+ JSExpr
                          #:inf- JSExpr
+                         #:mlist? Boolean
                          #:mhash? Boolean)
                         (U EOF JSExpr)])
   (define (bytes->jsexpr bs
@@ -221,11 +239,13 @@
                          #:null [jsnull (json-null)]
                          #:inf+ [jsinf+ (json-inf+)]
                          #:inf- [jsinf- (json-inf-)]
+                         #:mlist? [jsmlist? (jsexpr-mlist?)]
                          #:mhash? [jsmhash? (jsexpr-mhash?)])
     (define i (open-input-bytes bs))
     (parameterize ([json-null jsnull]
                    [json-inf+ jsinf+]
                    [json-inf- jsinf-]
+                   [jsexpr-mlist? jsmlist?]
                    [jsexpr-mhash? jsmhash?])
       (define js (read-JSON i who #:mutable? #f))
       (if (eof-object? js)
