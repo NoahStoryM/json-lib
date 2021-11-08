@@ -123,7 +123,7 @@
           [(or (eq? x (json-null)) (equal? x json-null)) JSON-null]
           [(json-constant? x) x]
           [(list? x)  (map jsexpr->immutable-json x)]
-          ;; [(mpair? x) (map jsexpr->immutable-json (jsexpr-copy x #:mlist? #f))] ; TODO
+          [(mpair? x) (map jsexpr->immutable-json (assert (jsexpr-copy x #:mlist? #f) list?))]
           [(hash? x)
            (for/hasheq : JS-Hash
                ([(k v) (in-hash x)])
@@ -137,8 +137,8 @@
           [(or (eq? x (json-inf-)) (equal? x json-inf-)) JSON-inf-]
           [(or (eq? x (json-null)) (equal? x json-null)) JSON-null]
           [(json-constant? x) x]
-          [(list? x)  (list->mlist (map jsexpr->mutable-json x))]
-          ;; [(mpair? x) (list->mlist (map jsexpr->mutable-json (jsexpr-copy x #:mlist? #f)))] ; TODO
+          [(list? x)  (map->mlist jsexpr->mutable-json x)]
+          [(mpair? x) (map->mlist jsexpr->mutable-json (assert (jsexpr-copy x #:mlist? #f) list?))]
           [(hash? x)
            (: result JS-MHash)
            (define result (make-hasheq))
