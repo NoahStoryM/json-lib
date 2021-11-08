@@ -39,5 +39,5 @@
    [string->json : (case-> [->* (String #:mutable? False) (Symbol) (U EOF Immutable-JSON)]
                            [->* (String #:mutable? True ) (Symbol) (U EOF Mutable-JSON)])]
    [bytes->json  : (case-> [->* (Bytes #:mutable? False) (Symbol) (U EOF Immutable-JSON)]
-                             [->* (Bytes #:mutable? True ) (Symbol) (U EOF Mutable-JSON)])]
+                           [->* (Bytes #:mutable? True ) (Symbol) (U EOF Mutable-JSON)])]
    ))
