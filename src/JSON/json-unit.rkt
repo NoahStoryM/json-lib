@@ -56,7 +56,7 @@
   ;; PARSING (from JSON to Racket)
 
   (: read-JSON (case-> [->* (#:mutable? False) (Input-Port Symbol) (U EOF Immutable-JSON)]
-                       [->* (#:mutable? True)  (Input-Port Symbol) (U EOF Mutable-JSON)]))
+                       [->* (#:mutable? True ) (Input-Port Symbol) (U EOF Mutable-JSON)]))
   (define (read-JSON #:mutable? mutable? [i (current-input-port)] [who 'read-JSON])
     (read-JSON* who i #:mutable? mutable?))
 

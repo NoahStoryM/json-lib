@@ -16,7 +16,7 @@
    ;; IO
    [write-JSON : [->* (JSON) (Output-Port Symbol #:encode Encode) Void]]
    [read-JSON  : (case-> [->* (#:mutable? False) (Input-Port Symbol) (U EOF Immutable-JSON)]
-                         [->* (#:mutable? True) (Input-Port Symbol) (U EOF Mutable-JSON)])]
+                         [->* (#:mutable? True ) (Input-Port Symbol) (U EOF Mutable-JSON)])]
 
    ;; Conversion
    [json-copy    : (case-> [-> JSON #:mutable? False Immutable-JSON]
