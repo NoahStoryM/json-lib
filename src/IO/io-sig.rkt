@@ -8,7 +8,11 @@
 
 (define-signature io^
   (
-   [write-JSON* : [-> Symbol JSON Output-Port Encode Void]]
+   [write-JSON* : [-> Symbol JSON Output-Port
+                      [#:encode  Encode]
+                      [#:format? Boolean]
+                      [#:indent  String]
+                      Void]]
    [read-JSON*  : (case-> [-> Symbol Input-Port #:mutable? False (U EOF Immutable-JSON)]
                           [-> Symbol Input-Port #:mutable? True  (U EOF Mutable-JSON)])]
    ))

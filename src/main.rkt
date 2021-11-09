@@ -14,6 +14,8 @@
          "types.rkt"
          "IO/io-sig.rkt"
          "IO/io-unit.rkt"
+         "Format/format-sig.rkt"
+         "Format/format-unit.rkt"
          "JSON/json-sig.rkt"
          "JSON/json-unit.rkt"
          "JSExpr/jsexpr-sig.rkt"
@@ -57,6 +59,9 @@
  write-jsexpr (rename-out [write-jsexpr write-json])
  read-jsexpr  (rename-out [read-jsexpr  read-json])
 
+ ;; Format
+ format-json
+
  ;; Conversion Functions
  json-copy    jsexpr-copy
  json->jsexpr jsexpr->json
@@ -71,12 +76,12 @@
 
 (define-compound-unit/infer base@
   (import)
-  (export io^ json^ jsexpr^)
-  (link   io@ json@ jsexpr@))
+  (export io^ format^ json^ jsexpr^)
+  (link   io@ format@ json@ jsexpr@))
 
 (define-values/invoke-unit base@
   (import)
-  (export io^ json^ jsexpr^))
+  (export io^ format^ json^ jsexpr^))
 
 
 ;; -----------------------------------------------------------------------------

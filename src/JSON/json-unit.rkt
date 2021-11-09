@@ -45,12 +45,23 @@
   ;; -----------------------------------------------------------------------------
   ;; GENERATION  (from Racket to JSON)
 
-  (: write-JSON [->* (JSON) (Output-Port Symbol #:encode Encode) Void])
+  (: write-JSON [->* (JSON)
+                     (Output-Port
+                      Symbol
+                      #:encode  Encode
+                      #:format? Boolean
+                      #:indent  String)
+                     Void])
   (define (write-JSON js
                       [o (current-output-port)]
                       [who 'write-Immutable-JSON]
-                      #:encode [enc 'control])
-    (write-JSON* who js o enc))
+                      #:encode  [enc 'control]
+                      #:format? [format? #f]
+                      #:indent  [indent  "    "])
+    (write-JSON* who js o
+                 #:encode  enc
+                 #:format? format?
+                 #:indent  indent))
 
   ;; -----------------------------------------------------------------------------
   ;; PARSING (from JSON to Racket)
@@ -158,16 +169,40 @@
                 [(eq? #t mutable?) (jsexpr->mutable-json   x)])))))
 
 
-  (: json->string [->* (JSON) (Symbol #:encode Encode) String])
-  (define (json->string js [who 'json->string] #:encode [enc 'control])
+  (: json->string [->* (JSON)
+                       (Symbol
+                        #:encode  Encode
+                        #:format? Boolean
+                        #:indent  String)
+                       String])
+  (define (json->string js
+                        [who 'json->string]
+                        #:encode  [enc 'control]
+                        #:format? [format? #f]
+                        #:indent  [indent  "    "])
     (define o (open-output-string))
-    (write-JSON js o who #:encode enc)
+    (write-JSON js o who
+                #:encode  enc
+                #:format? format?
+                #:indent  indent)
     (get-output-string o))
 
-  (: json->bytes [->* (JSON) (Symbol #:encode Encode) Bytes])
-  (define (json->bytes js [who 'json->bytes] #:encode [enc 'control])
+  (: json->bytes [->* (JSON)
+                      (Symbol
+                       #:encode  Encode
+                       #:format? Boolean
+                       #:indent  String)
+                      Bytes])
+  (define (json->bytes js
+                       [who 'json->bytes]
+                       #:encode  [enc 'control]
+                       #:format? [format? #f]
+                       #:indent  [indent  "    "])
     (define o (open-output-bytes))
-    (write-JSON js o who #:encode enc)
+    (write-JSON js o who
+                #:encode  enc
+                #:format? format?
+                #:indent  indent)
     (get-output-bytes o))
 
   (: string->json (case-> [->* (String #:mutable? False) (Symbol) (U EOF Immutable-JSON)]

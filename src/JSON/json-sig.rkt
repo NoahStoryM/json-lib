@@ -14,7 +14,13 @@
    [json-mhash? : [-> (U EOF JSON) Boolean : JS-MHash]]
 
    ;; IO
-   [write-JSON : [->* (JSON) (Output-Port Symbol #:encode Encode) Void]]
+   [write-JSON : [->* (JSON)
+                      (Output-Port
+                       Symbol
+                       #:encode  Encode
+                       #:format? Boolean
+                       #:indent  String)
+                      Void]]
    [read-JSON  : (case-> [->* (#:mutable? False) (Input-Port Symbol) (U EOF Immutable-JSON)]
                          [->* (#:mutable? True ) (Input-Port Symbol) (U EOF Mutable-JSON)])]
 
@@ -34,8 +40,18 @@
                                [#:inf- JSExpr]
                                Mutable-JSON])]
 
-   [json->string : [->* (JSON) (Symbol #:encode Encode) String]]
-   [json->bytes  : [->* (JSON) (Symbol #:encode Encode) Bytes]]
+   [json->string : [->* (JSON)
+                        (Symbol
+                         #:encode  Encode
+                         #:format? Boolean
+                         #:indent  String)
+                        String]]
+   [json->bytes  : [->* (JSON)
+                        (Symbol
+                         #:encode  Encode
+                         #:format? Boolean
+                         #:indent  String)
+                        Bytes]]
    [string->json : (case-> [->* (String #:mutable? False) (Symbol) (U EOF Immutable-JSON)]
                            [->* (String #:mutable? True ) (Symbol) (U EOF Mutable-JSON)])]
    [bytes->json  : (case-> [->* (Bytes #:mutable? False) (Symbol) (U EOF Immutable-JSON)]

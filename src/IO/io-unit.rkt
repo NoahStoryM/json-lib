@@ -22,12 +22,19 @@
   (import json^)
   (export io^)
 
-  (: write-JSON* [-> Symbol JSON Output-Port Encode Void])
+  (: write-JSON* [-> Symbol JSON Output-Port
+                     [#:encode  Encode]
+                     [#:format? Boolean]
+                     [#:indent  String]
+                     Void])
   (define write-JSON*
     (let ()
       (define undefined (gensym 'undefined))
 
-      (λ (who js o enc)
+      (λ (who js o
+          #:encode  [enc 'control]
+          #:format? [format? #f]
+          #:indent  [indent  "    "])
         (: escape [-> String String * String])
         (define (escape m . ms)
           (define ch (string-ref m 0))
@@ -76,8 +83,30 @@
           (write-string (regexp-replace* rx-to-encode str escape) o)
           (write-bytes #"\"" o))
 
+        (: format/write-whitespace [-> (U Void Index)])
+        (define (format/write-whitespace)
+          (when format? (write-bytes #" " o)))
 
-        (let loop : (U Void Index) ([js js])
+        (: format/write-newline [-> (U Void Index)])
+        (define (format/write-newline)
+          (when format? (write-bytes #"\n" o)))
+
+        (: format/write-indent [-> Natural Void])
+        (define (format/write-indent layer)
+          (when format?
+            (for ([i (in-range 0 layer)])
+              (write-string indent o))))
+
+        (: format/write-indentln [-> Natural Void])
+        (define (format/write-indentln layer)
+          (when format? (format/write-indent layer) (newline o)))
+
+        (: format/write-lnindent [-> Natural Void])
+        (define (format/write-lnindent layer)
+          (when format? (newline o) (format/write-indent layer)))
+
+
+        (let loop : (U Void Index) ([js js] [layer : Natural 0])
           (cond
             [(json-constant? js)
              (cond
@@ -87,14 +116,14 @@
                      (not (js-inf+? (json-inf+))))
                 (define jsinf+ (json-inf+))
                 (parameterize ([json-inf+ undefined])
-                  (loop (jsexpr->json jsinf+ #:mutable? #f)))]
+                  (loop (jsexpr->json jsinf+ #:mutable? #f) layer))]
                [(and (js-inf-? js)
                      ;; eliminate endless loops
                      (not (equal? json-inf- (json-inf-)))
                      (not (js-inf-? (json-inf-))))
                 (define jsinf- (json-inf-))
                 (parameterize ([json-inf- undefined])
-                  (loop (jsexpr->json jsinf- #:mutable? #f)))]
+                  (loop (jsexpr->json jsinf- #:mutable? #f) layer))]
                [(js-null? js) (write-bytes #"null"  o)]
                [(eq? js #f)   (write-bytes #"false" o)]
                [(eq? js #t)   (write-bytes #"true"  o)]
@@ -104,38 +133,48 @@
             [(or (list? js) (mpair? js))
              (write-bytes #"[" o)
              (cond [(pair? js)
-                    (loop (car js))
+                    (loop (car js) (add1 layer))
                     (for ([js (in-list (cdr js))])
                       (write-bytes #"," o)
-                      (loop js))]
+                      (format/write-whitespace)
+                      (loop js (add1 layer)))]
                    [(mpair? js)
-                    (loop (mcar js))
+                    (loop (mcar js) (add1 layer))
                     (for ([js (in-mlist (mcdr js))])
                       (write-bytes #"," o)
-                      (loop js))])
+                      (format/write-whitespace)
+                      (loop js (add1 layer)))])
              (write-bytes #"]" o)]
             [(hash? js)
              (: first? Boolean)
              (define first? #t)
 
-             (: write-hash-kv [-> Symbol JSON (U Void Index)])
-             (define write-hash-kv
+             (: write-hash-kv [-> Natural [-> Symbol JSON (U Void Index)]])
+             (define (write-hash-kv layer)
                (lambda (k v)
                  (if first? (set! first? #f) (write-bytes #"," o))
+                 (format/write-lnindent layer)
                  ;; use a string encoding so we get the same deal with
                  ;; `rx-to-encode'
                  (write-JSON-string (symbol->string k))
                  (write-bytes #":" o)
-                 (loop v)))
+                 (format/write-whitespace)
+                 (loop v layer)))
 
+             (format/write-lnindent layer)
              (write-bytes #"{" o)
              (if (json-hash? js)
-                 (hash-for-each js (ann write-hash-kv [-> Symbol Immutable-JSON (U Void Index)])
+                 (hash-for-each js
+                                (ann (write-hash-kv (add1 layer))
+                                     [-> Symbol Immutable-JSON (U Void Index)])
                                 ;; order output
                                 #t)
-                 (hash-for-each js (ann write-hash-kv [-> Symbol Mutable-JSON   (U Void Index)])
+                 (hash-for-each js
+                                (ann (write-hash-kv (add1 layer))
+                                     [-> Symbol Mutable-JSON   (U Void Index)])
                                 ;; order output
                                 #t))
+             (format/write-lnindent layer)
              (write-bytes #"}" o)]))
 
         (void))))

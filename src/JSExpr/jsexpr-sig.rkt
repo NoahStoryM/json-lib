@@ -22,7 +22,9 @@
                          #:null JSExpr
                          #:inf+ JSExpr
                          #:inf- JSExpr
-                         #:encode Encode)
+                         #:encode  Encode
+                         #:format? Boolean
+                         #:indent  String)
                         Void]]
    [read-jsexpr  : [->* ()
                         (Input-Port
@@ -55,14 +57,18 @@
                            #:null JSExpr
                            #:inf+ JSExpr
                            #:inf- JSExpr
-                           #:encode Encode)
+                           #:encode  Encode
+                           #:format? Boolean
+                           #:indent  String)
                           String]]
    [jsexpr->bytes  : [->* (JSExpr)
                           (Symbol
                            #:null JSExpr
                            #:inf+ JSExpr
                            #:inf- JSExpr
-                           #:encode Encode)
+                           #:encode  Encode
+                           #:format? Boolean
+                           #:indent  String)
                           Bytes]]
    [string->jsexpr : [->* (String)
                           (Symbol

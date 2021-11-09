@@ -48,7 +48,9 @@
                         #:null JSExpr
                         #:inf+ JSExpr
                         #:inf- JSExpr
-                        #:encode Encode)
+                        #:encode  Encode
+                        #:format? Boolean
+                        #:indent  String)
                        Void])
   (define (write-jsexpr x
                         [o (current-output-port)]
@@ -56,11 +58,16 @@
                         #:null [jsnull (json-null)]
                         #:inf+ [jsinf+ (json-inf+)]
                         #:inf- [jsinf- (json-inf-)]
-                        #:encode [enc 'control])
+                        #:encode  [enc 'control]
+                        #:format? [format? #f]
+                        #:indent  [indent  "    "])
     (parameterize ([json-null jsnull]
                    [json-inf+ jsinf+]
                    [json-inf- jsinf-])
-      (write-JSON* who (jsexpr->json x #:mutable? #f) o enc)))
+      (write-JSON (jsexpr->json x #:mutable? #f) o who
+                  #:encode  enc
+                  #:format? format?
+                  #:indent  indent)))
 
   ;; -----------------------------------------------------------------------------
   ;; PARSING (from JSON to Racket)
@@ -169,36 +176,52 @@
                           #:null JSExpr
                           #:inf+ JSExpr
                           #:inf- JSExpr
-                          #:encode Encode)
+                          #:encode  Encode
+                          #:format? Boolean
+                          #:indent  String)
                          String])
   (define (jsexpr->string x
                           [who 'jsexpr->string]
                           #:null [jsnull (json-null)]
                           #:inf+ [jsinf+ (json-inf+)]
                           #:inf- [jsinf- (json-inf-)]
-                          #:encode [enc 'control])
+                          #:encode  [enc 'control]
+                          #:format? [format? #f]
+                          #:indent  [indent  "    "])
     (parameterize ([json-null jsnull]
                    [json-inf+ jsinf+]
                    [json-inf- jsinf-])
-      (json->string (jsexpr->json x #:mutable? #f) who #:encode enc)))
+      (json->string (jsexpr->json x #:mutable? #f)
+                    who
+                    #:encode  enc
+                    #:format? format?
+                    #:indent  indent)))
 
   (: jsexpr->bytes [->* (JSExpr)
                         (Symbol
                          #:null JSExpr
                          #:inf+ JSExpr
                          #:inf- JSExpr
-                         #:encode Encode)
+                         #:encode  Encode
+                         #:format? Boolean
+                         #:indent  String)
                         Bytes])
   (define (jsexpr->bytes x
                          [who 'jsexpr->bytes]
                          #:null [jsnull (json-null)]
                          #:inf+ [jsinf+ (json-inf+)]
                          #:inf- [jsinf- (json-inf-)]
-                         #:encode [enc 'control])
+                         #:encode  [enc 'control]
+                         #:format? [format? #f]
+                         #:indent  [indent  "    "])
     (parameterize ([json-null jsnull]
                    [json-inf+ jsinf+]
                    [json-inf- jsinf-])
-      (json->bytes (jsexpr->json x #:mutable? #f) who #:encode enc)))
+      (json->bytes (jsexpr->json x #:mutable? #f)
+                   who
+                   #:encode  enc
+                   #:format? format?
+                   #:indent  indent)))
 
   (: string->jsexpr [->* (String)
                          (Symbol
