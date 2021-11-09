@@ -78,65 +78,65 @@
 
 
         (let loop : (U Void Index) ([js js])
+          (cond
+            [(json-constant? js)
              (cond
-               [(json-constant? js)
-                (cond
-                  [(and (js-inf+? js)
-                        ;; eliminate endless loops
-                        (not (equal? json-inf+ (json-inf+)))
-                        (not (js-inf+? (json-inf+))))
-                   (define jsinf+ (json-inf+))
-                   (parameterize ([json-inf+ undefined])
-                     (loop (jsexpr->json jsinf+ #:mutable? #f)))]
-                  [(and (js-inf-? js)
-                        ;; eliminate endless loops
-                        (not (equal? json-inf- (json-inf-)))
-                        (not (js-inf-? (json-inf-))))
-                   (define jsinf- (json-inf-))
-                   (parameterize ([json-inf- undefined])
-                     (loop (jsexpr->json jsinf- #:mutable? #f)))]
-                  [(js-null? js) (write-bytes #"null"  o)]
-                  [(eq? js #f)   (write-bytes #"false" o)]
-                  [(eq? js #t)   (write-bytes #"true"  o)]
-                  [(or (exact-integer? js) (inexact-rational? js)) (write js o)]
-                  [(string? js) (write-JSON-string js)]
-                  [else (raise-type-error who "legal JSON value" js)])]
-               [(or (list? js) (mpair? js))
-                (write-bytes #"[" o)
-                (cond [(pair? js)
-                       (loop (car js))
-                       (for ([js (in-list (cdr js))])
-                         (write-bytes #"," o)
-                         (loop js))]
-                      [(mpair? js)
-                       (loop (mcar js))
-                       (for ([js (in-mlist (mcdr js))])
-                         (write-bytes #"," o)
-                         (loop js))])
-                (write-bytes #"]" o)]
-               [(hash? js)
-                (: first? Boolean)
-                (define first? #t)
+               [(and (js-inf+? js)
+                     ;; eliminate endless loops
+                     (not (equal? json-inf+ (json-inf+)))
+                     (not (js-inf+? (json-inf+))))
+                (define jsinf+ (json-inf+))
+                (parameterize ([json-inf+ undefined])
+                  (loop (jsexpr->json jsinf+ #:mutable? #f)))]
+               [(and (js-inf-? js)
+                     ;; eliminate endless loops
+                     (not (equal? json-inf- (json-inf-)))
+                     (not (js-inf-? (json-inf-))))
+                (define jsinf- (json-inf-))
+                (parameterize ([json-inf- undefined])
+                  (loop (jsexpr->json jsinf- #:mutable? #f)))]
+               [(js-null? js) (write-bytes #"null"  o)]
+               [(eq? js #f)   (write-bytes #"false" o)]
+               [(eq? js #t)   (write-bytes #"true"  o)]
+               [(or (exact-integer? js) (inexact-rational? js)) (write js o)]
+               [(string? js) (write-JSON-string js)]
+               [else (raise-type-error who "legal JSON value" js)])]
+            [(or (list? js) (mpair? js))
+             (write-bytes #"[" o)
+             (cond [(pair? js)
+                    (loop (car js))
+                    (for ([js (in-list (cdr js))])
+                      (write-bytes #"," o)
+                      (loop js))]
+                   [(mpair? js)
+                    (loop (mcar js))
+                    (for ([js (in-mlist (mcdr js))])
+                      (write-bytes #"," o)
+                      (loop js))])
+             (write-bytes #"]" o)]
+            [(hash? js)
+             (: first? Boolean)
+             (define first? #t)
 
-                (: write-hash-kv [-> Symbol JSON (U Void Index)])
-                (define write-hash-kv
-                  (lambda (k v)
-                    (if first? (set! first? #f) (write-bytes #"," o))
-                    ;; use a string encoding so we get the same deal with
-                    ;; `rx-to-encode'
-                    (write-JSON-string (symbol->string k))
-                    (write-bytes #":" o)
-                    (loop v)))
+             (: write-hash-kv [-> Symbol JSON (U Void Index)])
+             (define write-hash-kv
+               (lambda (k v)
+                 (if first? (set! first? #f) (write-bytes #"," o))
+                 ;; use a string encoding so we get the same deal with
+                 ;; `rx-to-encode'
+                 (write-JSON-string (symbol->string k))
+                 (write-bytes #":" o)
+                 (loop v)))
 
-                (write-bytes #"{" o)
-                (if (json-hash? js)
-                    (hash-for-each js (ann write-hash-kv [-> Symbol Immutable-JSON (U Void Index)])
-                                   ;; order output
-                                   #t)
-                    (hash-for-each js (ann write-hash-kv [-> Symbol Mutable-JSON   (U Void Index)])
-                                   ;; order output
-                                   #t))
-                (write-bytes #"}" o)]))
+             (write-bytes #"{" o)
+             (if (json-hash? js)
+                 (hash-for-each js (ann write-hash-kv [-> Symbol Immutable-JSON (U Void Index)])
+                                ;; order output
+                                #t)
+                 (hash-for-each js (ann write-hash-kv [-> Symbol Mutable-JSON   (U Void Index)])
+                                ;; order output
+                                #t))
+             (write-bytes #"}" o)]))
 
         (void))))
 
@@ -277,24 +277,24 @@
                  (define buf (make-bytes 6 c))
 
                  (let utf8-loop : String ([start : Natural 0] [end : Natural 1])
-                      (define-values (wrote-n read-n state)
-                        (bytes-convert cvtr buf start end buf 0 6))
+                   (define-values (wrote-n read-n state)
+                     (bytes-convert cvtr buf start end buf 0 6))
 
-                      (case state
-                        [(complete)
-                         (keep-char (bytes-utf-8-ref buf 0) result pos cvtr)]
-                        [(error)
-                         (err "UTF-8 decoding error at ~e" (subbytes buf 0 end))]
-                        [(continues)
-                         (err "no enough space at ~e" buf)]
-                        [(aborts)
-                         (define c (read-byte i))
-                         (cond
-                           [(eof-object? c)
-                            (err "unexpected end-of-file")]
-                           [else
-                            (bytes-set! buf end c)
-                            (utf8-loop (+ start read-n) (add1 end))])]))]))
+                   (case state
+                     [(complete)
+                      (keep-char (bytes-utf-8-ref buf 0) result pos cvtr)]
+                     [(error)
+                      (err "UTF-8 decoding error at ~e" (subbytes buf 0 end))]
+                     [(continues)
+                      (err "no enough space at ~e" buf)]
+                     [(aborts)
+                      (define c (read-byte i))
+                      (cond
+                        [(eof-object? c)
+                         (err "unexpected end-of-file")]
+                        [else
+                         (bytes-set! buf end c)
+                         (utf8-loop (+ start read-n) (add1 end))])]))]))
 
             (: read-escape [-> Char String Natural (Option Bytes-Converter) String])
             (define read-escape
