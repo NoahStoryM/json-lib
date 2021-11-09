@@ -9,9 +9,12 @@
 (define-signature json^
   (
    ;; Predicate
-   [mjson?      : [-> JSON Boolean : Mutable-JSON]]
-   [json-mlist? : [-> JSON Boolean : JS-MList]]
-   [json-mhash? : [-> (U EOF JSON) Boolean : JS-MHash]]
+   [json?         : [-> Any Boolean]]
+   [mutable-json? : [-> Any Boolean]]
+
+   [mjson?        : [-> JSON Boolean : Mutable-JSON]]
+   [json-mlist?   : [-> JSON Boolean : JS-MList]]
+   [json-mhash?   : [-> (U EOF JSON) Boolean : JS-MHash]]
 
    ;; IO
    [write-JSON : [->* (JSON)

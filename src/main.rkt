@@ -82,28 +82,3 @@
 (define-values/invoke-unit base@
   (import)
   (export io^ format^ json^ jsexpr^))
-
-
-;; -----------------------------------------------------------------------------
-;; PREDICATE
-
-(module more racket/base
-  (provide mutable-json?)
-  (require "types.rkt"
-           "untyped-help.rkt")
-
-  (define (mutable-json? x)
-    (or (json-constant? x)
-        (null? x)
-        (and (mlist? x) (andmmap mutable-json? x))
-        (and (hash? x) (not (immutable? x))
-             (for/and ([(k v) (in-hash x)])
-               (and (symbol? k) (mutable-json? v))))))
-
-  (define (andmmap f l)
-    (let loop ([l l])
-      (if (null? l) #t (and (f (mcar l)) (loop (mcdr l)))))))
-(require/typed 'more [mutable-json? [-> Any Boolean]])
-
-(: json? [-> Any Boolean])
-(define (json? x) (or (immutable-json? x) (mutable-json? x)))

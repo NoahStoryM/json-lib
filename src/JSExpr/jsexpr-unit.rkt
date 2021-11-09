@@ -9,7 +9,64 @@
 
 (provide jsexpr@)
 
-(require/typed "untyped.rkt"
+
+(module untyped racket/base
+  (provide jsexpr? jsexpr-copy)
+  (require "../types.rkt"
+           "../untyped-help.rkt")
+
+  (define (jsexpr? x
+                   #:null [jsnull (json-null)]
+                   #:inf+ [jsinf+ (json-inf+)]
+                   #:inf- [jsinf- (json-inf-)])
+    (parameterize ([json-null jsnull]
+                   [json-inf+ jsinf+]
+                   [json-inf- jsinf-])
+      (let loop ([x x])
+        (or (equal? x json-inf+) (eq? x (json-inf+))
+            (equal? x json-inf-) (eq? x (json-inf-))
+            (equal? x json-null) (eq? x (json-null))
+            (json-constant? x)
+            (and (list?  x) (andmap  loop x))
+            (and (mlist? x) (andmmap loop x))
+            (and (hash? x) (for/and ([(k v) (in-hash x)])
+                             (and (symbol? k) (loop v))))))))
+
+  (define (jsexpr-copy x
+                     #:null   [jsnull   (json-null)]
+                     #:inf+   [jsinf+   (json-inf+)]
+                     #:inf-   [jsinf-   (json-inf-)]
+                     #:mlist? [jsmlist? (jsexpr-mlist?)]
+                     #:mhash? [jsmhash? (jsexpr-mhash?)])
+  (parameterize ([json-null jsnull]
+                 [json-inf+ jsinf+]
+                 [json-inf- jsinf-]
+                 [jsexpr-mlist? jsmlist?]
+                 [jsexpr-mhash? jsmhash?])
+    (cond
+      [(or (eq? x (json-inf+)) (equal? x json-inf+)) x]
+      [(or (eq? x (json-inf-)) (equal? x json-inf-)) x]
+      [(or (eq? x (json-null)) (equal? x json-null)) x]
+      [(json-constant? x) x]
+      [(list? x)
+       (if (jsexpr-mlist?)
+           (map->mlist jsexpr-copy x)
+           (map jsexpr-copy x))]
+      [(mpair? x)
+       (if (jsexpr-mlist?)
+           (mmap jsexpr-copy x)
+           (mmap->list jsexpr-copy x))]
+      [(hash? x)
+       (cond
+         [(jsexpr-mhash?)
+          (define result (make-hasheq))
+          (for ([(k v) (in-hash x)])
+            (hash-set! result k (jsexpr-copy v)))
+          result]
+         [else
+          (for/hasheq ([(k v) (in-hash x)])
+            (values k (jsexpr-copy v)))])]))))
+(require/typed 'untyped
   [[jsexpr? untyped/jsexpr?]
    [-> Any
        [#:null JSExpr]
