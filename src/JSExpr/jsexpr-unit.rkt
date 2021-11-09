@@ -65,7 +65,8 @@
           result]
          [else
           (for/hasheq ([(k v) (in-hash x)])
-            (values k (jsexpr-copy v)))])]))))
+            (values k (jsexpr-copy v)))])]
+      [else (raise-type-error 'jsexpr-copy "jsexpr?" x)]))))
 (require/typed 'untyped
   [[jsexpr? untyped/jsexpr?]
    [-> Any
