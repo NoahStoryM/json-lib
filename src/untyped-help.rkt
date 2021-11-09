@@ -15,13 +15,13 @@
 (: map->mlist (All (A B) [-> [-> A B] (Listof  A) (MListof B)]))
 (define-values (mmap mmap->list map->mlist)
   (let ()
-    (define ((make s-car s-cdr t-cons) f l)
+    (define ((make s-car s-cdr t-cons return) f l)
       (let loop ([l l] [res '()])
-        (if (null? l) res (loop (s-cdr l) (t-cons (f (s-car l)) res)))))
+        (if (null? l) (return res) (loop (s-cdr l) (t-cons (f (s-car l)) res)))))
 
-    (values (make mcar mcdr mcons)
-            (make mcar mcdr  cons)
-            (make  car  cdr mcons))))
+    (values (make mcar mcdr mcons mreverse)
+            (make mcar mcdr  cons  reverse)
+            (make  car  cdr mcons mreverse))))
 
 (: andmmap (All (A B) [-> [-> A B] (MListof A) (U Boolean B)]))
 (define (andmmap f l)
