@@ -31,6 +31,7 @@
     (define-values (i o) (make-pipe))
     (cond [(string? js) (write-string js o)]
           [(bytes?  js) (write-bytes  js o)])
+    (write eof o)
     (define json (assert (read-JSON* who i #:mutable? #f) immutable-json?))
 
     (cond [(eq? type 'string)
