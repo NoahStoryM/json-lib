@@ -202,7 +202,7 @@
                    (: result (Mutable-HashTable Symbol JSExpr))
                    (define result (make-hasheq))
                    (for ([(k v) (in-hash js)])
-                     (hash-set! result k v))
+                     (hash-set! result k (json->jsexpr v)))
                    result]
                   [else
                    (for/hasheq : (Immutable-HashTable Symbol JSExpr)
@@ -220,7 +220,7 @@
                    (: result (Mutable-HashTable Symbol JSExpr))
                    (define result (make-hasheq))
                    (for ([(k v) (in-hash js)])
-                     (hash-set! result k v))
+                     (hash-set! result k (json->jsexpr v)))
                    result]
                   [else
                    (for/hasheq : (Immutable-HashTable Symbol JSExpr)
