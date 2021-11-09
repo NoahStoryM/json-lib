@@ -34,7 +34,7 @@
       (λ (who js o
           #:encode  [enc 'control]
           #:format? [format? #f]
-          #:indent  [indent  "    "])
+          #:indent  [indent  "\t"])
         (: escape [-> String String * String])
         (define (escape m . ms)
           (define ch (string-ref m 0))

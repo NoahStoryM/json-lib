@@ -117,7 +117,7 @@
                         #:inf- [jsinf- (json-inf-)]
                         #:encode  [enc 'control]
                         #:format? [format? #f]
-                        #:indent  [indent  "    "])
+                        #:indent  [indent  "\t"])
     (parameterize ([json-null jsnull]
                    [json-inf+ jsinf+]
                    [json-inf- jsinf-])
@@ -244,7 +244,7 @@
                           #:inf- [jsinf- (json-inf-)]
                           #:encode  [enc 'control]
                           #:format? [format? #f]
-                          #:indent  [indent  "    "])
+                          #:indent  [indent  "\t"])
     (parameterize ([json-null jsnull]
                    [json-inf+ jsinf+]
                    [json-inf- jsinf-])
@@ -270,7 +270,7 @@
                          #:inf- [jsinf- (json-inf-)]
                          #:encode  [enc 'control]
                          #:format? [format? #f]
-                         #:indent  [indent  "    "])
+                         #:indent  [indent  "\t"])
     (parameterize ([json-null jsnull]
                    [json-inf+ jsinf+]
                    [json-inf- jsinf-])

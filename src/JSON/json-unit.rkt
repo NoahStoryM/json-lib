@@ -79,7 +79,7 @@
                       [who 'write-Immutable-JSON]
                       #:encode  [enc 'control]
                       #:format? [format? #f]
-                      #:indent  [indent  "    "])
+                      #:indent  [indent  "\t"])
     (write-JSON* who js o
                  #:encode  enc
                  #:format? format?
@@ -201,7 +201,7 @@
                         [who 'json->string]
                         #:encode  [enc 'control]
                         #:format? [format? #f]
-                        #:indent  [indent  "    "])
+                        #:indent  [indent  "\t"])
     (define o (open-output-string))
     (write-JSON js o who
                 #:encode  enc
@@ -219,7 +219,7 @@
                        [who 'json->bytes]
                        #:encode  [enc 'control]
                        #:format? [format? #f]
-                       #:indent  [indent  "    "])
+                       #:indent  [indent  "\t"])
     (define o (open-output-bytes))
     (write-JSON js o who
                 #:encode  enc
