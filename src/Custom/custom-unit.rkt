@@ -19,7 +19,7 @@
   (: json-null (Parameter JSExpr))
   (define json-null (make-parameter 'null))
 
-  (: JSON-null JS-Null)
+  (: JSON-null JSON-Null)
   (define JSON-null (js-null))
 
 
@@ -27,7 +27,7 @@
   (: json-inf+ (Parameter JSExpr))
   (define json-inf+ (make-parameter +inf.0))
 
-  (: JSON-inf+ JS-Pos-Inf)
+  (: JSON-inf+ JSON-Pos-Inf)
   (define JSON-inf+ (js-inf+))
 
 
@@ -35,7 +35,7 @@
   (: json-inf- (Parameter JSExpr))
   (define json-inf- (make-parameter -inf.0))
 
-  (: JSON-inf- JS-Neg-Inf)
+  (: JSON-inf- JSON-Neg-Inf)
   (define JSON-inf- (js-inf-))
 
 

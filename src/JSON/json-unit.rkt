@@ -11,22 +11,6 @@
 (provide json@)
 
 
-(module untyped racket/base
-  (provide mutable-json?)
-  (require "../types.rkt"
-           "../untyped-help.rkt")
-
-  (define (mutable-json? x)
-    (or (json-constant? x)
-        (null? x)
-        (and (mlist? x) (andmmap mutable-json? x))
-        (and (hash? x) (not (immutable? x))
-             (for/and ([(k v) (in-hash x)])
-               (and (symbol? k) (mutable-json? v)))))))
-(require/typed 'untyped
-  [[mutable-json? untyped/mutable-json?]
-   [-> Any Boolean]])
-
 (define-unit json@
   (import custom^ io^ jsexpr^)
   (export json^)
@@ -34,19 +18,13 @@
   ;; -----------------------------------------------------------------------------
   ;; MORE PREDICATE
 
-  (: json? [-> Any Boolean])
-  (define (json? x) (or (immutable-json? x) (mutable-json? x)))
-
-  (: mutable-json? [-> Any Boolean])
-  (define mutable-json? untyped/mutable-json?)
-
   (: mjson? [-> JSON Boolean : Mutable-JSON])
   (define (mjson? js)
     (or (json-constant? js)
         (json-mlist? js)
         (json-mhash? js)))
 
-  (: json-mlist? [-> JSON Boolean : JS-MList])
+  (: json-mlist? [-> JSON Boolean : JSON-MList])
   (define (json-mlist? js) (or (null? js) (mpair? js)))
 
   ;;; TODO
@@ -57,12 +35,12 @@
   ;;            (json-mhash? js)
   ;;            (json-mlist? js))))
 
-  ;; (: json-mlist? [-> (U EOF JSON) Boolean : JS-MList])
+  ;; (: json-mlist? [-> (U EOF JSON) Boolean : JSON-MList])
   ;; (define (json-mlist? js)
   ;;   (and (not (eof-object? js))
   ;;        (or (null? js) (mpair? js))))
 
-  (: json-mhash? [-> (U EOF JSON) Boolean : JS-MHash])
+  (: json-mhash? [-> (U EOF JSON) Boolean : JSON-MHash])
   (define (json-mhash? js) (and (not (eof-object? js)) (mhash? js)))
 
   ;; -----------------------------------------------------------------------------
@@ -107,7 +85,7 @@
           [(immutable-json? js) js]
           [(json-mlist? js) (mlist->list (mmap copy-immutable-json js))]
           [(json-mhash? js)
-           (for/hasheq : JS-Hash
+           (for/hasheq : JSON-Hash
                ([(k v) (in-hash js)])
              (values k (copy-immutable-json v)))]))
 
@@ -118,13 +96,13 @@
           [(json-list?  js) (mmap copy-mutable-json (list->mlist js))]
           [(json-mlist? js) (mmap copy-mutable-json js)]
           [(json-hash? js)
-           (: result JS-MHash)
+           (: result JSON-MHash)
            (define result (make-hasheq))
            (for ([(k v) (in-hash js)])
              (hash-set! result k (copy-mutable-json v)))
            result]
           [(json-mhash? js)
-           (: result JS-MHash)
+           (: result JSON-MHash)
            (define result (make-hasheq))
            (for ([(k v) (in-hash js)])
              (hash-set! result k (copy-mutable-json v)))
@@ -159,7 +137,7 @@
           [(list? x)  (map jsexpr->immutable-json x)]
           ;; [(mpair? x) (map jsexpr->immutable-json (assert (jsexpr-copy x #:mlist? #f) list?))] ; TODO
           [(hash? x)
-           (for/hasheq : JS-Hash
+           (for/hasheq : JSON-Hash
                ([(k v) (in-hash x)])
              (values (assert k symbol?) (jsexpr->immutable-json v)))]
           [else (raise-type-error 'jsexpr->immutable-json "jsexpr?" x)]))
@@ -174,7 +152,7 @@
           [(list? x)  (map->mlist jsexpr->mutable-json x)]
           ;; [(mpair? x) (map->mlist jsexpr->mutable-json (assert (jsexpr-copy x #:mlist? #f) list?))] ; TODO
           [(hash? x)
-           (: result JS-MHash)
+           (: result JSON-MHash)
            (define result (make-hasheq))
            (for ([(k v) (in-hash x)])
              (hash-set! result (assert k symbol?) (jsexpr->mutable-json v)))

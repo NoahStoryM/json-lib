@@ -38,22 +38,22 @@
  jsexpr-mhash?
 
  ;; Type and Predicate
- Mutable-JSON   mutable-json?   mjson?
+ JSON
+ Mutable-JSON   mjson?
  Immutable-JSON immutable-json?
- JSON           json?
  JSExpr         jsexpr?
 
- JS-List json-list? JS-MList json-mlist?
- JS-Hash json-hash? JS-MHash json-mhash?
+ JSON-List json-list? JSON-MList json-mlist?
+ JSON-Hash json-hash? JSON-MHash json-mhash?
 
- JS-Constant json-constant?
+ JSON-Constant json-constant?
 
- JS-Number   json-number?
- JS-Inf      js-inf?
- JS-Pos-Inf  js-inf+? JSON-inf+
- JS-Neg-Inf  js-inf-? JSON-inf-
+ JSON-Number   json-number?
+ JSON-Inf      js-inf?
+ JSON-Pos-Inf  js-inf+? JSON-inf+
+ JSON-Neg-Inf  js-inf-? JSON-inf-
 
- JS-Null     js-null? JSON-null
+ JSON-Null     js-null? JSON-null
 
  ;; IO
  write-JSON read-JSON

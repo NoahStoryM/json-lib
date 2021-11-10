@@ -12,9 +12,9 @@
    [json-inf+ : (Parameter JSExpr)]
    [json-inf- : (Parameter JSExpr)]
 
-   [JSON-null : JS-Null]
-   [JSON-inf+ : JS-Pos-Inf]
-   [JSON-inf- : JS-Neg-Inf]
+   [JSON-null : JSON-Null]
+   [JSON-inf+ : JSON-Pos-Inf]
+   [JSON-inf- : JSON-Neg-Inf]
 
    [jsexpr-mhash? : (Parameter Boolean)]
    ))

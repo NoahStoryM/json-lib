@@ -17,29 +17,29 @@
 (define-type Inexact-Rational (Refine [n : Inexact-Real] (! n (U Inexact-Real-Nan Inexact-Real-Inf))))
 (define-predicate inexact-rational? Inexact-Rational)
 
-(define-type JS-Number (U Integer Inexact-Rational JS-Inf))
-(define-predicate json-number? JS-Number)
+(define-type JSON-Number (U Integer Inexact-Rational JSON-Inf))
+(define-predicate json-number? JSON-Number)
 
-(struct js-inf+ () #:transparent #:type-name JS-Pos-Inf)
-(struct js-inf- () #:transparent #:type-name JS-Neg-Inf)
-(define-type JS-Inf (U JS-Pos-Inf JS-Neg-Inf))
-(define-predicate js-inf? JS-Inf)
+(struct js-inf+ () #:transparent #:type-name JSON-Pos-Inf)
+(struct js-inf- () #:transparent #:type-name JSON-Neg-Inf)
+(define-type JSON-Inf (U JSON-Pos-Inf JSON-Neg-Inf))
+(define-predicate js-inf? JSON-Inf)
 
-(struct js-null () #:transparent #:type-name JS-Null)
+(struct js-null () #:transparent #:type-name JSON-Null)
 
-(define-type JS-Constant (U JS-Number JS-Null Boolean String))
-(define-predicate json-constant? JS-Constant)
+(define-type JSON-Constant (U JSON-Number JSON-Null Boolean String))
+(define-predicate json-constant? JSON-Constant)
 
-(define-type JS-MList (MListof Mutable-JSON))
-(define-type JS-List  (Listof  Immutable-JSON))
-(define-predicate json-list? JS-List)
+(define-type JSON-MList (MListof Mutable-JSON))
+(define-type JSON-List  (Listof  Immutable-JSON))
+(define-predicate json-list? JSON-List)
 
-(define-type JS-MHash (Mutable-HashTable   Symbol Mutable-JSON))
-(define-type JS-Hash  (Immutable-HashTable Symbol Immutable-JSON))
-(define-predicate json-hash? JS-Hash)
+(define-type JSON-MHash (Mutable-HashTable   Symbol Mutable-JSON))
+(define-type JSON-Hash  (Immutable-HashTable Symbol Immutable-JSON))
+(define-predicate json-hash? JSON-Hash)
 
-(define-type Mutable-JSON   (U JS-Constant JS-MList JS-MHash))
-(define-type Immutable-JSON (U JS-Constant JS-List  JS-Hash))
+(define-type Mutable-JSON   (U JSON-Constant JSON-MList JSON-MHash))
+(define-type Immutable-JSON (U JSON-Constant JSON-List  JSON-Hash))
 (define-type JSON (U Mutable-JSON Immutable-JSON))
 (define-predicate immutable-json? Immutable-JSON)
 

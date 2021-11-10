@@ -184,8 +184,8 @@
                         [-> Symbol Input-Port #:mutable? True  (U EOF Mutable-JSON)]))
   (define read-JSON*
     (let ()
-      (define-type JS-Whitespace (U #\space #\tab #\newline #\return))
-      (define-predicate json-whitespace? JS-Whitespace)
+      (define-type JSON-Whitespace (U #\space #\tab #\newline #\return))
+      (define-predicate json-whitespace? JSON-Whitespace)
 
       (define-type SGN (U -1 1))
       (define-type SGN-Mark  (U #"-" #"+"))
@@ -198,10 +198,10 @@
       (: byte-char=? [-> Byte Char Boolean])
       (define (byte-char=? b ch) (eqv? b (char->integer ch)))
 
-      (: to-json-number [-> (U JS-Number Inexact-Real)
+      (: to-json-number [-> (U JSON-Number Inexact-Real)
                             [#:inf+ JSExpr]
                             [#:inf- JSExpr]
-                            JS-Number])
+                            JSON-Number])
       (define (to-json-number n
                               #:inf+ [jsinf+ (json-inf+)]
                               #:inf- [jsinf- (json-inf-)])
@@ -223,7 +223,7 @@
 
       ;; evaluate n * 10^exp to inexact? without passing large arguments to expt
       ;; assumes n is an integer
-      (: safe-exponential->inexact [-> Integer Integer JS-Number])
+      (: safe-exponential->inexact [-> Integer Integer JSON-Number])
       (define (safe-exponential->inexact n exp)
         (define result-exp
           (if (= n 0)
@@ -448,19 +448,19 @@
                        what end read-one)))))
 
         ;;
-        (: read-hash  [-> JS-Hash])
-        (: read-mhash [-> JS-MHash])
+        (: read-hash  [-> JSON-Hash])
+        (: read-mhash [-> JSON-MHash])
         (define-values (read-hash read-mhash)
           (let ()
-            (define-type JS-Pair  (Pairof  Symbol Immutable-JSON))
-            (define-type JS-MPair (MPairof Symbol Mutable-JSON))
+            (define-type JSON-Pair  (Pairof  Symbol Immutable-JSON))
+            (define-type JSON-MPair (MPairof Symbol Mutable-JSON))
 
-            (: read-pair  [-> JS-Pair])
-            (: read-mpair [-> JS-MPair])
+            (: read-pair  [-> JSON-Pair])
+            (: read-mpair [-> JSON-MPair])
             (define-values (read-pair read-mpair)
               (let ()
-                (: make (case-> [-> [-> Symbol Immutable-JSON JS-Pair]  #:mutable? False [-> JS-Pair]]
-                                [-> [-> Symbol Mutable-JSON   JS-MPair] #:mutable? True  [-> JS-MPair]]))
+                (: make (case-> [-> [-> Symbol Immutable-JSON JSON-Pair]  #:mutable? False [-> JSON-Pair]]
+                                [-> [-> Symbol Mutable-JSON   JSON-MPair] #:mutable? True  [-> JSON-MPair]]))
                 (define ((make tcons #:mutable? mutable?))
                   (define k (read-JSON #:mutable? mutable?))
                   (unless (string? k) (err "non-string value used for json object key"))
@@ -478,11 +478,11 @@
                 (values (make cons #:mutable? #f) (make mcons #:mutable? #t))))
 
             (values (λ ()
-                      (for/hasheq : JS-Hash
+                      (for/hasheq : JSON-Hash
                           ([p (in-list (read-list 'object #\} read-pair))])
                         (values (car p) (cdr p))))
                     (λ ()
-                      (: result JS-MHash)
+                      (: result JSON-MHash)
                       (define result (make-hasheq))
                       (for ([p (in-mlist (read-mlist 'object #\} read-mpair))])
                         (hash-set! result (mcar p) (mcdr p)))
@@ -511,10 +511,10 @@
               (bad-input bstr))))
 
         ;;
-        (: read-number [-> Char JS-Number])
+        (: read-number [-> Char JSON-Number])
         (define (read-number ch)
           ;; match #rx#"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?"
-          (: start [-> JS-Number])
+          (: start [-> JSON-Number])
           (define (start)
             (cond
               [(eqv? ch #\-)
@@ -524,7 +524,7 @@
                (read-integer 1)]))
 
           ;; need at least one digit:
-          (: read-integer [-> SGN JS-Number])
+          (: read-integer [-> SGN JSON-Number])
           (define (read-integer sgn)
             (define c (read-byte i))
             (cond
@@ -536,7 +536,7 @@
                                #:eof? (eof-object? c))]))
 
           ;; more digits:
-          (: read-integer-rest [-> SGN Byte #:more-digits? Boolean JS-Number])
+          (: read-integer-rest [-> SGN Byte #:more-digits? Boolean JSON-Number])
           (define (read-integer-rest sgn n #:more-digits? more-digits?)
             (define c (peek-byte i))
             (to-json-number
@@ -554,7 +554,7 @@
                [else (* sgn n)])))
 
           ;; need at least one digit:
-          (: read-fraction [-> SGN Byte JS-Number])
+          (: read-fraction [-> SGN Byte JSON-Number])
           (define (read-fraction sgn n)
             (define c (read-byte i))
             (cond
@@ -565,7 +565,7 @@
                                #:eof? (eof-object? c))]))
 
           ;; more digits:
-          (: read-fraction-rest [-> SGN Natural Integer JS-Number])
+          (: read-fraction-rest [-> SGN Natural Integer JSON-Number])
           (define (read-fraction-rest sgn n exp)
             (define c (peek-byte i))
             (to-json-number
@@ -580,7 +580,7 @@
                [else (exact->inexact (* sgn n (expt 10 exp)))])))
 
           ;; need at least one digit, maybe after +/-:
-          (: read-exponent [-> Integer Expt-Mark Integer JS-Number])
+          (: read-exponent [-> Integer Expt-Mark Integer JSON-Number])
           (define (read-exponent n mark exp)
             (define c (read-byte i))
             (cond
@@ -596,7 +596,7 @@
                                #:eof? (eof-object? c))]))
 
           ;; need at least one digit, still:
-          (: read-exponent-more [-> Integer Expt-Mark SGN-Mark Integer SGN JS-Number])
+          (: read-exponent-more [-> Integer Expt-Mark SGN-Mark Integer SGN JSON-Number])
           (define (read-exponent-more n mark mark2 exp sgn)
             (define c (read-byte i))
             (cond
@@ -609,7 +609,7 @@
                                #:eof? (eof-object? c))]))
 
           ;; more digits:
-          (: read-exponent-rest [-> Integer Integer Integer SGN JS-Number])
+          (: read-exponent-rest [-> Integer Integer Integer SGN JSON-Number])
           (define (read-exponent-rest n exp exp2 sgn)
             (define c (peek-byte i))
             (cond
