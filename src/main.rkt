@@ -12,6 +12,8 @@
 
 (require typed/racket/unit
          "types.rkt"
+         "Custom/custom-sig.rkt"
+         "Custom/custom-unit.rkt"
          "IO/io-sig.rkt"
          "IO/io-unit.rkt"
          "Format/format-sig.rkt"
@@ -33,7 +35,7 @@
 (provide
  ;; Parameter
  json-null json-inf+ json-inf-
- jsexpr-mlist? jsexpr-mhash?
+ jsexpr-mhash?
 
  ;; Type and Predicate
  Mutable-JSON   mutable-json?   mjson?
@@ -76,9 +78,9 @@
 
 (define-compound-unit/infer base@
   (import)
-  (export io^ format^ json^ jsexpr^)
-  (link   io@ format@ json@ jsexpr@))
+  (export custom^ io^ format^ json^ jsexpr^)
+  (link   custom@ io@ format@ json@ jsexpr@))
 
 (define-values/invoke-unit base@
   (import)
-  (export io^ format^ json^ jsexpr^))
+  (export custom^ io^ format^ json^ jsexpr^))

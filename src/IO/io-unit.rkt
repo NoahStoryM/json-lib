@@ -3,6 +3,7 @@
 (require typed/racket/unit
          "../types.rkt"
          "../typed-help.rkt"
+         "../Custom/custom-sig.rkt"
          "../JSON/json-sig.rkt"
          "io-sig.rkt")
 
@@ -19,7 +20,7 @@
 
 
 (define-unit io@
-  (import json^)
+  (import custom^ json^)
   (export io^)
 
   (: write-JSON* [-> Symbol JSON Output-Port

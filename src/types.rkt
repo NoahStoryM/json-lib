@@ -46,36 +46,3 @@
 (define-type JSExpr Any)
 
 (define-type Encode (U 'control 'all))
-
-;; -----------------------------------------------------------------------------
-;; CUSTOMIZATION
-
-;; The default translation for a JSON `null' value
-(: json-null (Parameter JSExpr))
-(define json-null (make-parameter 'null))
-
-(: JSON-null JS-Null)
-(define JSON-null (js-null))
-
-
-;; The default translation for a Racket `+inf' value
-(: json-inf+ (Parameter JSExpr))
-(define json-inf+ (make-parameter +inf.0))
-
-(: JSON-inf+ JS-Pos-Inf)
-(define JSON-inf+ (js-inf+))
-
-
-;; The default translation for a Racket `-inf' value
-(: json-inf- (Parameter JSExpr))
-(define json-inf- (make-parameter -inf.0))
-
-(: JSON-inf- JS-Neg-Inf)
-(define JSON-inf- (js-inf-))
-
-
-(: jsexpr-mlist? (Parameter Boolean))
-(define jsexpr-mlist? (make-parameter #f))
-
-(: jsexpr-mhash? (Parameter Boolean))
-(define jsexpr-mhash? (make-parameter #f))
