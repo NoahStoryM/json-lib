@@ -21,8 +21,12 @@
                        #:format? Boolean
                        #:indent  String)
                       Void]]
-   [read-JSON  : (case-> [->* (#:mutable? False) (Input-Port Symbol) (U EOF Immutable-JSON)]
-                         [->* (#:mutable? True ) (Input-Port Symbol) (U EOF Mutable-JSON)])]
+   [read-JSON  : (case-> [->* (#:mutable? False)
+                              (Input-Port Symbol)
+                              (U EOF Immutable-JSON)]
+                         [->* (#:mutable? True)
+                              (Input-Port Symbol)
+                              (U EOF Mutable-JSON)])]
 
    ;; Conversion
    [json-copy    : (case-> [-> JSON #:mutable? False Immutable-JSON]
@@ -52,8 +56,16 @@
                          #:format? Boolean
                          #:indent  String)
                         Bytes]]
-   [string->json : (case-> [->* (String #:mutable? False) (Symbol) (U EOF Immutable-JSON)]
-                           [->* (String #:mutable? True ) (Symbol) (U EOF Mutable-JSON)])]
-   [bytes->json  : (case-> [->* (Bytes #:mutable? False) (Symbol) (U EOF Immutable-JSON)]
-                           [->* (Bytes #:mutable? True ) (Symbol) (U EOF Mutable-JSON)])]
+   [string->json : (case-> [->* (String #:mutable? False)
+                                (Symbol)
+                                (U EOF Immutable-JSON)]
+                           [->* (String #:mutable? True)
+                                (Symbol)
+                                (U EOF Mutable-JSON)])]
+   [bytes->json  : (case-> [->* (Bytes #:mutable? False)
+                                (Symbol)
+                                (U EOF Immutable-JSON)]
+                           [->* (Bytes #:mutable? True)
+                                (Symbol)
+                                (U EOF Mutable-JSON)])]
    ))

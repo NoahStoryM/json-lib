@@ -67,8 +67,12 @@
   ;; -----------------------------------------------------------------------------
   ;; PARSING (from JSON to Racket)
 
-  (: read-JSON (case-> [->* (#:mutable? False) (Input-Port Symbol) (U EOF Immutable-JSON)]
-                       [->* (#:mutable? True ) (Input-Port Symbol) (U EOF Mutable-JSON)]))
+  (: read-JSON (case-> [->* (#:mutable? False)
+                            (Input-Port Symbol)
+                            (U EOF Immutable-JSON)]
+                       [->* (#:mutable? True)
+                            (Input-Port Symbol)
+                            (U EOF Mutable-JSON)]))
   (define (read-JSON #:mutable? mutable? [i (current-input-port)] [who 'read-JSON])
     (read-JSON* who i #:mutable? mutable?))
 
@@ -204,14 +208,22 @@
                 #:indent  indent)
     (get-output-bytes o))
 
-  (: string->json (case-> [->* (String #:mutable? False) (Symbol) (U EOF Immutable-JSON)]
-                          [->* (String #:mutable? True ) (Symbol) (U EOF Mutable-JSON)]))
+  (: string->json (case-> [->* (String #:mutable? False)
+                               (Symbol)
+                               (U EOF Immutable-JSON)]
+                          [->* (String #:mutable? True)
+                               (Symbol)
+                               (U EOF Mutable-JSON)]))
   (define (string->json str #:mutable? mutable? [who 'string->json])
     (define i (open-input-string str))
     (read-JSON i who #:mutable? mutable?))
 
-  (: bytes->json (case-> [->* (Bytes #:mutable? False) (Symbol) (U EOF Immutable-JSON)]
-                         [->* (Bytes #:mutable? True ) (Symbol) (U EOF Mutable-JSON)]))
+  (: bytes->json (case-> [->* (Bytes #:mutable? False)
+                              (Symbol)
+                              (U EOF Immutable-JSON)]
+                         [->* (Bytes #:mutable? True)
+                              (Symbol)
+                              (U EOF Mutable-JSON)]))
   (define (bytes->json bs #:mutable? mutable? [who 'bytes->json])
     (define i (open-input-bytes bs))
     (read-JSON i who #:mutable? mutable?)))
