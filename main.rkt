@@ -1,5 +1,5 @@
 #lang typed/racket/base
 
-(require "typed.rkt")
+(require "untyped.rkt")
 
-(provide (all-from-out "typed.rkt"))
+(provide (all-from-out "untyped.rkt"))

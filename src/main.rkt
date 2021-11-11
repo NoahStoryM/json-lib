@@ -55,7 +55,7 @@
 
  JSON-Null     js-null? JSON-null
 
- Encode
+ Encode        encode?
 
  ;; IO
  write-JSON read-JSON

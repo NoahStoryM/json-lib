@@ -46,3 +46,4 @@
 (define-type JSExpr Any)
 
 (define-type Encode (U 'control 'all))
+(define-predicate encode? Encode)
