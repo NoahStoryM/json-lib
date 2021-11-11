@@ -1,7 +1,9 @@
 #lang typed/racket/base
 
+(require typed/racket/unsafe)
+
 (require "src/main.rkt")
-(require/typed "untyped.rkt"
+(unsafe-require/typed "untyped.rkt"
   [mutable-json? [-> Any Boolean]]
   [json?         [-> Any Boolean]])
 

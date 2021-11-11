@@ -1,12 +1,53 @@
 #lang typed/racket/base/no-check
 
-(require "src/main.rkt"
-         "src/untyped-help.rkt"
+(require racket/contract
+         "src/untyped-help.rkt")
 
-         racket/contract)
+(module filter typed/racket/base
+  (require typed/racket/unsafe
+           "src/main.rkt")
+
+  (provide (except-out
+            (all-from-out "src/main.rkt")
+            ;; Predicate
+            mjson?
+            json-mlist?
+            json-mhash?
+
+            ;; IO
+            write-JSON
+            read-JSON
+
+            ;; Conversion
+            json-copy
+            jsexpr->json
+            json->jsexpr
+
+            json->string
+            json->bytes
+            string->json
+            bytes->json))
+
+  (unsafe-provide mjson?
+                  json-mlist?
+                  json-mhash?
+
+                  write-JSON
+                  read-JSON
+
+                  json-copy
+                  jsexpr->json
+                  json->jsexpr
+
+                  json->string
+                  json->bytes
+                  string->json
+                  bytes->json))
+
+(require 'filter)
 
 (provide (except-out
-          (all-from-out "src/main.rkt")
+          (all-from-out 'filter)
           ;; Predicate
           mjson?
           json-mlist?
