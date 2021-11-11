@@ -2,7 +2,8 @@
 
 ;; Mathias, added test for contracts on read-jsexpr
 
-(require "../main.rkt" racket/string tests/eli-tester
+(require "../untyped.rkt"
+         racket/string tests/eli-tester
          racket/port racket/contract)
 
 (define T string-append)
@@ -92,11 +93,11 @@
    (immutable-json? '#hasheq([x . 1] [y . 2]))
    (immutable-json? '#hash([x . 1] [y . 2])) ; fine as a json too
    (immutable-json? '#hasheq([|x\y| . 1] [y . 2]))
-   ;; (mutable-json? (hash-copy '#hasheq()))
-   ;; (mutable-json? (hash-copy '#hasheq([x . 1])))
-   ;; (mutable-json? (hash-copy '#hasheq([x . 1] [y . 2])))
-   ;; (mutable-json? (hash-copy '#hash([x . 1] [y . 2])))
-   ;; (mutable-json? (hash-copy '#hasheq([|x\y| . 1] [y . 2])))
+   (mutable-json? (hash-copy '#hasheq()))
+   (mutable-json? (hash-copy '#hasheq([x . 1])))
+   (mutable-json? (hash-copy '#hasheq([x . 1] [y . 2])))
+   (mutable-json? (hash-copy '#hash([x . 1] [y . 2])))
+   (mutable-json? (hash-copy '#hasheq([|x\y| . 1] [y . 2])))
    (not (immutable-json? '#hasheq([1 . 1])))
    (not (immutable-json? '#hasheq(["x" . 1])))
    (not (immutable-json? '#hasheq(['() . 1])))
