@@ -36,7 +36,6 @@
             (equal? x json-null) (eq? x (json-null))
             (json-constant? x)
             (and (list?  x) (andmap  loop x))
-            ;; (and (mlist? x) (andmmap loop x)) ; TODO
             (and (hash? x) (for/and ([(k v) (in-hash x)])
                              (and (symbol? k) (loop v))))))))
 
@@ -120,10 +119,6 @@
       [(or (eq? x (json-null)) (equal? x json-null)) x]
       [(json-constant? x) x]
       [(list? x) (map jsexpr-copy x)]
-      ;; [(mpair? x) ; TODO
-      ;;  (if (jsexpr-mlist?)
-      ;;      (mmap jsexpr-copy x)
-      ;;      (mmap->list jsexpr-copy x))]
       [(hash? x)
        (cond
          [(jsexpr-mhash?)

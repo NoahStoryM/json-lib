@@ -135,7 +135,6 @@
           [(or (eq? x (json-null)) (equal? x json-null)) JSON-null]
           [(json-constant? x) x]
           [(list? x)  (map jsexpr->immutable-json x)]
-          ;; [(mpair? x) (map jsexpr->immutable-json (assert (jsexpr-copy x #:mlist? #f) list?))] ; TODO
           [(hash? x)
            (for/hasheq : JSON-Hash
                ([(k v) (in-hash x)])
@@ -150,7 +149,6 @@
           [(or (eq? x (json-null)) (equal? x json-null)) JSON-null]
           [(json-constant? x) x]
           [(list? x)  (map->mlist jsexpr->mutable-json x)]
-          ;; [(mpair? x) (map->mlist jsexpr->mutable-json (assert (jsexpr-copy x #:mlist? #f) list?))] ; TODO
           [(hash? x)
            (: result JSON-MHash)
            (define result (make-hasheq))
