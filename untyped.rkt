@@ -102,7 +102,7 @@
                               #:inf+ any/c
                               #:inf- any/c
                               #:mhash? boolean?)
-                             any/c]]
+                             any]]
 
           [json->string [->* (json?)
                              (symbol?
