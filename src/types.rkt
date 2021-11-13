@@ -20,12 +20,21 @@
 (define-type JSON-Number (U Integer Inexact-Rational JSON-Inf))
 (define-predicate json-number? JSON-Number)
 
-(struct js-inf+ () #:transparent #:type-name JSON-Pos-Inf)
-(struct js-inf- () #:transparent #:type-name JSON-Neg-Inf)
+(struct JSON-inf+ ()
+  #:transparent
+  #:constructor-name make-JSON-inf+
+  #:type-name JSON-Pos-Inf)
+(struct JSON-inf- ()
+  #:transparent
+  #:constructor-name make-JSON-inf-
+  #:type-name JSON-Neg-Inf)
 (define-type JSON-Inf (U JSON-Pos-Inf JSON-Neg-Inf))
-(define-predicate js-inf? JSON-Inf)
+(define-predicate JSON-inf? JSON-Inf)
 
-(struct js-null () #:transparent #:type-name JSON-Null)
+(struct JSON-null ()
+  #:transparent
+  #:constructor-name make-JSON-null
+  #:type-name JSON-Null)
 
 (define-type JSON-Constant (U JSON-Number JSON-Null Boolean String))
 (define-predicate json-constant? JSON-Constant)

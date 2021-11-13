@@ -49,11 +49,10 @@
  JSON-Constant json-constant?
 
  JSON-Number   json-number?
- JSON-Inf      js-inf?
- JSON-Pos-Inf  js-inf+? JSON-inf+
- JSON-Neg-Inf  js-inf-? JSON-inf-
-
- JSON-Null     js-null? JSON-null
+ JSON-Inf      JSON-inf?
+ JSON-Pos-Inf  JSON-inf+? JSON-inf+
+ JSON-Neg-Inf  JSON-inf-? JSON-inf-
+ JSON-Null     JSON-null? JSON-null
 
  Encode        encode?
 

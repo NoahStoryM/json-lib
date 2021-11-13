@@ -111,23 +111,23 @@
           (cond
             [(json-constant? js)
              (cond
-               [(and (js-inf+? js)
+               [(and (JSON-inf+? js)
                      ;; eliminate endless loops
                      (not (equal? json-inf+ (json-inf+)))
-                     (not (js-inf+? (json-inf+))))
+                     (not (JSON-inf+? (json-inf+))))
                 (define jsinf+ (json-inf+))
                 (parameterize ([json-inf+ undefined])
                   (loop (jsexpr->json jsinf+ #:mutable? #f) layer))]
-               [(and (js-inf-? js)
+               [(and (JSON-inf-? js)
                      ;; eliminate endless loops
                      (not (equal? json-inf- (json-inf-)))
-                     (not (js-inf-? (json-inf-))))
+                     (not (JSON-inf-? (json-inf-))))
                 (define jsinf- (json-inf-))
                 (parameterize ([json-inf- undefined])
                   (loop (jsexpr->json jsinf- #:mutable? #f) layer))]
-               [(js-null? js) (write-bytes #"null"  o)]
-               [(eq? js #f)   (write-bytes #"false" o)]
-               [(eq? js #t)   (write-bytes #"true"  o)]
+               [(JSON-null? js) (write-bytes #"null"  o)]
+               [(eq? js #f)     (write-bytes #"false" o)]
+               [(eq? js #t)     (write-bytes #"true"  o)]
                [(or (exact-integer? js) (inexact-rational? js)) (write js o)]
                [(string? js) (write-JSON-string js)]
                [else (raise-type-error who "legal JSON value" js)])]

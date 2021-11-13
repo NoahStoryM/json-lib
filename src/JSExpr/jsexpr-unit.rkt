@@ -148,9 +148,9 @@
                    [jsexpr-mhash? jsmhash?])
       (cond
         [(json-constant? js)
-         (cond [(js-inf+? js) (json-inf+)]
-               [(js-inf-? js) (json-inf-)]
-               [(js-null? js) (json-null)]
+         (cond [(JSON-inf+? js) (json-inf+)]
+               [(JSON-inf-? js) (json-inf-)]
+               [(JSON-null? js) (json-null)]
                [else js])]
         [(immutable-json? js)
          (cond [(json-list? js) (map json->jsexpr js)]
