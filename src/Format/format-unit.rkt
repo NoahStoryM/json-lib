@@ -1,6 +1,6 @@
-#lang typed/racket/base
+#lang racket/base
 
-(require typed/racket/unit
+(require racket/unit
          "../types.rkt"
          "../IO/io-sig.rkt"
          "format-sig.rkt")
@@ -12,16 +12,6 @@
   (import io^)
   (export format^)
 
-  (: format-json (case-> [-> (U String Bytes)
-                             #:type 'string
-                             [#:encode Encode]
-                             [#:indent String]
-                             String]
-                         [-> (U String Bytes)
-                             #:type 'bytes
-                             [#:encode Encode]
-                             [#:indent String]
-                             Bytes]))
   (define (format-json js
                        #:type type
                        #:encode [enc 'control]
@@ -32,7 +22,7 @@
     (cond [(string? js) (write-string js o)]
           [(bytes?  js) (write-bytes  js o)])
     (write eof o)
-    (define json (assert (read-JSON* who i #:mutable? #f) immutable-json?))
+    (define json (read-JSON* who i #:mutable? #f))
 
     (cond [(eq? type 'string)
            (define o (open-output-string))

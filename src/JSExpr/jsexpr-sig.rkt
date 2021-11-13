@@ -1,6 +1,6 @@
-#lang typed/racket/base
+#lang racket/base
 
-(require typed/racket/unit
+(require racket/unit
          "../types.rkt")
 
 (provide jsexpr^)
@@ -9,76 +9,18 @@
 (define-signature jsexpr^
   (
    ;; Predicate
-   [jsexpr? : [-> Any
-                  [#:null JSExpr]
-                  [#:inf+ JSExpr]
-                  [#:inf- JSExpr]
-                  Boolean]]
+   jsexpr?
 
    ;; IO
-   [write-jsexpr : [->* (JSExpr)
-                        (Output-Port
-                         Symbol
-                         #:null JSExpr
-                         #:inf+ JSExpr
-                         #:inf- JSExpr
-                         #:encode  Encode
-                         #:format? Boolean
-                         #:indent  String)
-                        Void]]
-   [read-jsexpr  : [->* ()
-                        (Input-Port
-                         Symbol
-                         #:null JSExpr
-                         #:inf+ JSExpr
-                         #:inf- JSExpr
-                         #:mhash? Boolean)
-                        JSExpr]]
+   write-jsexpr
+   read-jsexpr
 
    ;; Conversion
-   [jsexpr-copy    : [-> JSExpr
-                         [#:null JSExpr]
-                         [#:inf+ JSExpr]
-                         [#:inf- JSExpr]
-                         [#:mhash? Boolean]
-                         JSExpr]]
-   [json->jsexpr   : [-> JSON
-                         [#:null JSExpr]
-                         [#:inf+ JSExpr]
-                         [#:inf- JSExpr]
-                         [#:mhash? Boolean]
-                         JSExpr]]
+   jsexpr-copy
+   json->jsexpr
 
-   [jsexpr->string : [->* (JSExpr)
-                          (Symbol
-                           #:null JSExpr
-                           #:inf+ JSExpr
-                           #:inf- JSExpr
-                           #:encode  Encode
-                           #:format? Boolean
-                           #:indent  String)
-                          String]]
-   [jsexpr->bytes  : [->* (JSExpr)
-                          (Symbol
-                           #:null JSExpr
-                           #:inf+ JSExpr
-                           #:inf- JSExpr
-                           #:encode  Encode
-                           #:format? Boolean
-                           #:indent  String)
-                          Bytes]]
-   [string->jsexpr : [->* (String)
-                          (Symbol
-                           #:null JSExpr
-                           #:inf+ JSExpr
-                           #:inf- JSExpr
-                           #:mhash? Boolean)
-                          (U EOF JSExpr)]]
-   [bytes->jsexpr  : [->* (Bytes)
-                          (Symbol
-                           #:null JSExpr
-                           #:inf+ JSExpr
-                           #:inf- JSExpr
-                           #:mhash? Boolean)
-                          (U EOF JSExpr)]]
+   jsexpr->string
+   jsexpr->bytes
+   string->jsexpr
+   bytes->jsexpr
    ))

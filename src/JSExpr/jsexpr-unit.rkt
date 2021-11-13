@@ -1,8 +1,8 @@
-#lang typed/racket/base
+#lang racket/base
 
-(require typed/racket/unit
+(require racket/unit
          "../types.rkt"
-         "../typed-help.rkt"
+         "../untyped-help.rkt"
          "../Custom/custom-sig.rkt"
          "../IO/io-sig.rkt"
          "../JSON/json-sig.rkt"
@@ -18,11 +18,6 @@
   ;; -----------------------------------------------------------------------------
   ;; MORE PREDICATE
 
-  (: jsexpr? [-> Any
-                 [#:null JSExpr]
-                 [#:inf+ JSExpr]
-                 [#:inf- JSExpr]
-                 Boolean])
   (define (jsexpr? x
                    #:null [jsnull (json-null)]
                    #:inf+ [jsinf+ (json-inf+)]
@@ -42,16 +37,6 @@
   ;; -----------------------------------------------------------------------------
   ;; GENERATION  (from Racket to JSON)
 
-  (: write-jsexpr [->* (JSExpr)
-                       (Output-Port
-                        Symbol
-                        #:null JSExpr
-                        #:inf+ JSExpr
-                        #:inf- JSExpr
-                        #:encode  Encode
-                        #:format? Boolean
-                        #:indent  String)
-                       Void])
   (define (write-jsexpr x
                         [o (current-output-port)]
                         [who 'write-jsexpr]
@@ -72,14 +57,6 @@
   ;; -----------------------------------------------------------------------------
   ;; PARSING (from JSON to Racket)
 
-  (: read-jsexpr [->* ()
-                      (Input-Port
-                       Symbol
-                       #:null JSExpr
-                       #:inf+ JSExpr
-                       #:inf- JSExpr
-                       #:mhash? Boolean)
-                      JSExpr])
   (define (read-jsexpr [i (current-input-port)]
                        [who 'read-jsexpr]
                        #:null   [jsnull (json-null)]
@@ -98,12 +75,6 @@
   ;; -----------------------------------------------------------------------------
   ;; CONVERSION
 
-  (: jsexpr-copy [-> JSExpr
-                     [#:null JSExpr]
-                     [#:inf+ JSExpr]
-                     [#:inf- JSExpr]
-                     [#:mhash? Boolean]
-                     JSExpr])
 (define (jsexpr-copy x
                      #:null   [jsnull   (json-null)]
                      #:inf+   [jsinf+   (json-inf+)]
@@ -131,12 +102,6 @@
             (values k (jsexpr-copy v)))])]
       [else (raise-type-error 'jsexpr-copy "jsexpr?" x)])))
 
-  (: json->jsexpr [-> JSON
-                      [#:null JSExpr]
-                      [#:inf+ JSExpr]
-                      [#:inf- JSExpr]
-                      [#:mhash? Boolean]
-                      JSExpr])
   (define (json->jsexpr js
                         #:null   [jsnull   (json-null)]
                         #:inf+   [jsinf+   (json-inf+)]
@@ -157,13 +122,12 @@
                [(json-hash? js)
                 (cond
                   [(jsexpr-mhash?)
-                   (: result (Mutable-HashTable Symbol JSExpr))
                    (define result (make-hasheq))
                    (for ([(k v) (in-hash js)])
                      (hash-set! result k (json->jsexpr v)))
                    result]
                   [else
-                   (for/hasheq : (Immutable-HashTable Symbol JSExpr)
+                   (for/hasheq
                        ([(k v) (in-hash js)])
                      (values k (json->jsexpr v)))])])]
         [else
@@ -172,26 +136,16 @@
                [(hash? js)
                 (cond
                   [(jsexpr-mhash?)
-                   (: result (Mutable-HashTable Symbol JSExpr))
                    (define result (make-hasheq))
                    (for ([(k v) (in-hash js)])
                      (hash-set! result k (json->jsexpr v)))
                    result]
                   [else
-                   (for/hasheq : (Immutable-HashTable Symbol JSExpr)
+                   (for/hasheq
                        ([(k v) (in-hash js)])
                      (values k (json->jsexpr v)))])])])))
 
 
-  (: jsexpr->string [->* (JSExpr)
-                         (Symbol
-                          #:null JSExpr
-                          #:inf+ JSExpr
-                          #:inf- JSExpr
-                          #:encode  Encode
-                          #:format? Boolean
-                          #:indent  String)
-                         String])
   (define (jsexpr->string x
                           [who 'jsexpr->string]
                           #:null [jsnull (json-null)]
@@ -209,15 +163,6 @@
                     #:format? format?
                     #:indent  indent)))
 
-  (: jsexpr->bytes [->* (JSExpr)
-                        (Symbol
-                         #:null JSExpr
-                         #:inf+ JSExpr
-                         #:inf- JSExpr
-                         #:encode  Encode
-                         #:format? Boolean
-                         #:indent  String)
-                        Bytes])
   (define (jsexpr->bytes x
                          [who 'jsexpr->bytes]
                          #:null [jsnull (json-null)]
@@ -235,13 +180,6 @@
                    #:format? format?
                    #:indent  indent)))
 
-  (: string->jsexpr [->* (String)
-                         (Symbol
-                          #:null JSExpr
-                          #:inf+ JSExpr
-                          #:inf- JSExpr
-                          #:mhash? Boolean)
-                         (U EOF JSExpr)])
   (define (string->jsexpr str
                           [who 'string->jsexpr]
                           #:null [jsnull (json-null)]
@@ -258,13 +196,6 @@
           eof
           (json->jsexpr js))))
 
-  (: bytes->jsexpr [->* (Bytes)
-                        (Symbol
-                         #:null JSExpr
-                         #:inf+ JSExpr
-                         #:inf- JSExpr
-                         #:mhash? Boolean)
-                        (U EOF JSExpr)])
   (define (bytes->jsexpr bs
                          [who 'bytes->jsexpr]
                          #:null [jsnull (json-null)]

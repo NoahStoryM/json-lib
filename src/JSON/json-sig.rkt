@@ -1,6 +1,6 @@
-#lang typed/racket/base
+#lang racket/base
 
-(require typed/racket/unit
+(require racket/unit
          "../types.rkt")
 
 (provide json^)
@@ -9,63 +9,20 @@
 (define-signature json^
   (
    ;; Predicate
-   [mjson?        : [-> JSON Boolean : Mutable-JSON]]
-   [json-mlist?   : [-> JSON Boolean : JSON-MList]]
-   [json-mhash?   : [-> (U EOF JSON) Boolean : JSON-MHash]]
+   mjson?
+   json-mlist?
+   json-mhash?
 
    ;; IO
-   [write-JSON : [->* (JSON)
-                      (Output-Port
-                       Symbol
-                       #:encode  Encode
-                       #:format? Boolean
-                       #:indent  String)
-                      Void]]
-   [read-JSON  : (case-> [->* (#:mutable? False)
-                              (Input-Port Symbol)
-                              (U EOF Immutable-JSON)]
-                         [->* (#:mutable? True)
-                              (Input-Port Symbol)
-                              (U EOF Mutable-JSON)])]
+   write-JSON
+   read-JSON
 
    ;; Conversion
-   [json-copy    : (case-> [-> JSON #:mutable? False Immutable-JSON]
-                           [-> JSON #:mutable? True  Mutable-JSON])]
-   [jsexpr->json : (case-> [-> JSExpr
-                               #:mutable? False
-                               [#:null JSExpr]
-                               [#:inf+ JSExpr]
-                               [#:inf- JSExpr]
-                               Immutable-JSON]
-                           [-> JSExpr
-                               #:mutable? True
-                               [#:null JSExpr]
-                               [#:inf+ JSExpr]
-                               [#:inf- JSExpr]
-                               Mutable-JSON])]
+   json-copy
+   jsexpr->json
 
-   [json->string : [->* (JSON)
-                        (Symbol
-                         #:encode  Encode
-                         #:format? Boolean
-                         #:indent  String)
-                        String]]
-   [json->bytes  : [->* (JSON)
-                        (Symbol
-                         #:encode  Encode
-                         #:format? Boolean
-                         #:indent  String)
-                        Bytes]]
-   [string->json : (case-> [->* (String #:mutable? False)
-                                (Symbol)
-                                (U EOF Immutable-JSON)]
-                           [->* (String #:mutable? True)
-                                (Symbol)
-                                (U EOF Mutable-JSON)])]
-   [bytes->json  : (case-> [->* (Bytes #:mutable? False)
-                                (Symbol)
-                                (U EOF Immutable-JSON)]
-                           [->* (Bytes #:mutable? True)
-                                (Symbol)
-                                (U EOF Mutable-JSON)])]
+   json->string
+   json->bytes
+   string->json
+   bytes->json
    ))

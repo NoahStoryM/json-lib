@@ -1,6 +1,6 @@
-#lang typed/racket/base
+#lang racket/base
 
-(require typed/racket/unit
+(require racket/unit
          "../types.rkt")
 
 (provide custom^)
@@ -8,13 +8,13 @@
 
 (define-signature custom^
   (
-   [json-null : (Parameter JSExpr)]
-   [json-inf+ : (Parameter JSExpr)]
-   [json-inf- : (Parameter JSExpr)]
+   json-null
+   json-inf+
+   json-inf-
 
-   [JSON-null : JSON-Null]
-   [JSON-inf+ : JSON-Pos-Inf]
-   [JSON-inf- : JSON-Neg-Inf]
+   JSON-null
+   JSON-inf+
+   JSON-inf-
 
-   [jsexpr-mhash? : (Parameter Boolean)]
+   jsexpr-mhash?
    ))

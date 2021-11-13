@@ -1,20 +1,13 @@
-#lang typed/racket/base
+#lang racket/base
 
-(require typed/racket/unit
+(require racket/unit
          "../types.rkt"
-         "../typed-help.rkt"
+         "../untyped-help.rkt"
          "../Custom/custom-sig.rkt"
          "../JSON/json-sig.rkt"
          "io-sig.rkt")
 
-(require/typed syntax/readerr
-  [raise-read-error [-> String Any
-                        (U Exact-Positive-Integer False)
-                        (U Exact-Nonnegative-Integer False)
-                        (U Exact-Positive-Integer False)
-                        (U Exact-Nonnegative-Integer False)
-                        [#:extra-srclocs (Listof srcloc)]
-                        Nothing]])
+(require syntax/readerr)
 
 (provide io@)
 
@@ -23,11 +16,6 @@
   (import custom^ json^)
   (export io^)
 
-  (: write-JSON* [-> Symbol JSON Output-Port
-                     [#:encode  Encode]
-                     [#:format? Boolean]
-                     [#:indent  String]
-                     Void])
   (define write-JSON*
     (let ()
       (define undefined (gensym 'undefined))
@@ -36,7 +24,6 @@
           #:encode  [enc 'control]
           #:format? [format? #f]
           #:indent  [indent  "\t"])
-        (: escape [-> String String * String])
         (define (escape m . ms)
           (define ch (string-ref m 0))
           (case ch
@@ -48,7 +35,6 @@
             [(#\\) "\\\\"]
             [(#\") "\\\""]
             [else
-             (: u-esc [-> Number String])
              (define (u-esc n)
                (define str (number->string n 16))
                (define pad
@@ -68,7 +54,6 @@
                    (string-append (u-esc (+ #xD800 (arithmetic-shift n -10)))
                                   (u-esc (+ #xDC00 (bitwise-and n #x3FF))))))]))
 
-        (: rx-to-encode Regexp)
         (define rx-to-encode
           (case enc
             ;; FIXME: This should also encode (always) anything that is represented
@@ -78,36 +63,30 @@
             [(control) #rx"[\0-\37\\\"\177]"]
             [(all)     #rx"[\0-\37\\\"\177-\U10FFFF]"]))
 
-        (: write-JSON-string [-> String Index])
         (define (write-JSON-string str)
           (write-bytes #"\"" o)
           (write-string (regexp-replace* rx-to-encode str escape) o)
           (write-bytes #"\"" o))
 
-        (: format/write-whitespace [-> (U Void Index)])
         (define (format/write-whitespace)
           (when format? (write-bytes #" " o)))
 
-        (: format/write-newline [-> (U Void Index)])
         (define (format/write-newline)
           (when format? (write-bytes #"\n" o)))
 
-        (: format/write-indent [-> Natural Void])
         (define (format/write-indent layer)
           (when format?
             (for ([i (in-range 0 layer)])
               (write-string indent o))))
 
-        (: format/write-indentln [-> Natural Void])
         (define (format/write-indentln layer)
           (when format? (format/write-indent layer) (newline o)))
 
-        (: format/write-lnindent [-> Natural Void])
         (define (format/write-lnindent layer)
           (when format? (newline o) (format/write-indent layer)))
 
 
-        (let loop : (U Void Index) ([js js] [layer : Natural 0])
+        (let loop ([js js] [layer 0])
           (cond
             [(json-constant? js)
              (cond
@@ -147,10 +126,7 @@
                       (loop js (add1 layer)))])
              (write-bytes #"]" o)]
             [(hash? js)
-             (: first? Boolean)
              (define first? #t)
-
-             (: write-hash-kv [-> Natural [-> Symbol JSON (U Void Index)]])
              (define (write-hash-kv layer)
                (lambda (k v)
                  (if first? (set! first? #f) (write-bytes #"," o))
@@ -166,13 +142,11 @@
              (write-bytes #"{" o)
              (if (json-hash? js)
                  (hash-for-each js
-                                (ann (write-hash-kv (add1 layer))
-                                     [-> Symbol Immutable-JSON (U Void Index)])
+                                (write-hash-kv (add1 layer))
                                 ;; order output
                                 #t)
                  (hash-for-each js
-                                (ann (write-hash-kv (add1 layer))
-                                     [-> Symbol Mutable-JSON   (U Void Index)])
+                                (write-hash-kv (add1 layer))
                                 ;; order output
                                 #t))
              (format/write-lnindent layer)
@@ -180,28 +154,22 @@
 
         (void))))
 
-  (: read-JSON* (case-> [-> Symbol Input-Port #:mutable? False (U EOF Immutable-JSON)]
-                        [-> Symbol Input-Port #:mutable? True  (U EOF Mutable-JSON)]))
   (define read-JSON*
     (let ()
-      (define-type JSON-Whitespace (U #\space #\tab #\newline #\return))
-      (define-predicate json-whitespace? JSON-Whitespace)
+      (define (json-whitespace? arg)
+        (ormap (λ (ch) (eqv? arg ch))
+               '(#\space #\tab #\newline #\return)))
 
-      (define-type SGN (U -1 1))
-      (define-type SGN-Mark  (U #"-" #"+"))
-      (define-type Expt-Mark (U #"E" #"e"))
-      (define-predicate expt-mark? Expt-Mark)
+      (define (expt-mark? arg)
+        (ormap (λ (b) (eqv? arg b))
+               '(#"E" #"e")))
 
-      (define-type Digit-Byte (U #x30 #x31 #x32 #x33 #x34 #x35 #x36 #x37 #x38 #x39))
-      (define-predicate digit-byte? Digit-Byte)
+      (define (digit-byte? arg)
+        (ormap (λ (n) (eqv? arg n))
+               '(#x30 #x31 #x32 #x33 #x34 #x35 #x36 #x37 #x38 #x39)))
 
-      (: byte-char=? [-> Byte Char Boolean])
       (define (byte-char=? b ch) (eqv? b (char->integer ch)))
 
-      (: to-json-number [-> (U JSON-Number Inexact-Real)
-                            [#:inf+ JSExpr]
-                            [#:inf- JSExpr]
-                            JSON-Number])
       (define (to-json-number n
                               #:inf+ [jsinf+ (json-inf+)]
                               #:inf- [jsinf- (json-inf-)])
@@ -213,17 +181,13 @@
             [(json-number? n) n]
             [(inexact-real-nan? n) (raise-type-error 'to-json-number "json-number?" n)])))
 
-      (: to-number [-> Digit-Byte Byte])
-      (define (to-number c)
-        (assert (- c (char->integer #\0)) byte?))
+      (define (to-number c) (- c (char->integer #\0)))
 
-      (: maybe-bytes [-> (U EOF Byte) Bytes])
       (define (maybe-bytes c)
         (if (eof-object? c) #"" (bytes c)))
 
       ;; evaluate n * 10^exp to inexact? without passing large arguments to expt
       ;; assumes n is an integer
-      (: safe-exponential->inexact [-> Integer Integer JSON-Number])
       (define (safe-exponential->inexact n exp)
         (define result-exp
           (if (= n 0)
@@ -245,7 +209,6 @@
             (exact->inexact (* n (expt 10 exp)))])))
 
       ;; used to reconstruct input for error reporting:
-      (: n->string [-> Integer Integer Bytes])
       (define (n->string n exp)
         (define s (number->string n))
         (string->bytes/utf-8
@@ -259,13 +222,11 @@
       (λ (who i #:mutable? mutable?)
         ;; Follows the specification (eg, at json.org) -- no extensions.
         ;;
-        (: err [-> String Any * Nothing])
         (define (err fmt . args)
           (define-values [l c p] (port-next-location i))
           (raise-read-error (format "~a: ~a" who (apply format fmt args))
                             (object-name i) l c p #f))
 
-        (: skip-whitespace [-> (U Char EOF)])
         (define (skip-whitespace)
           (define ch (peek-char i))
           (cond
@@ -282,10 +243,8 @@
         ;;
         ;; Reading a string *could* have been nearly trivial using the racket
         ;; reader, except that it won't handle a "\/"...
-        (: read-a-string [-> String])
         (define read-a-string
           (let ()
-            (: keep-char [-> Char String Natural (Option Bytes-Converter) String])
             (define (keep-char c old-result pos converter)
               (define result
                 (cond
@@ -297,7 +256,6 @@
               (string-set! result pos c)
               (loop result (add1 pos) converter))
 
-            (: loop [-> String Natural (Option Bytes-Converter) String])
             (define (loop result pos converter)
               (define c (read-byte i))
               (cond
@@ -312,11 +270,10 @@
                 [else
                  ;; need to decode, but we can't un-read the byte, and
                  ;; also we want to report decoding errors
-                 (define cvtr (or converter
-                                  (assert (bytes-open-converter "UTF-8" "UTF-8") bytes-converter?)))
+                 (define cvtr (or converter (bytes-open-converter "UTF-8" "UTF-8")))
                  (define buf (make-bytes 6 c))
 
-                 (let utf8-loop : String ([start : Natural 0] [end : Natural 1])
+                 (let utf8-loop ([start 0] [end 1])
                    (define-values (wrote-n read-n state)
                      (bytes-convert cvtr buf start end buf 0 6))
 
@@ -336,13 +293,10 @@
                          (bytes-set! buf end c)
                          (utf8-loop (+ start read-n) (add1 end))])]))]))
 
-            (: read-escape [-> Char String Natural (Option Bytes-Converter) String])
             (define read-escape
               (let ()
-                (: get-hex [-> Natural])
                 (define get-hex
                   (let ()
-                    (: read-next [-> Byte])
                     (define (read-next)
                       (define c (read-byte i))
                       (when (eof-object? c) (error "unexpected end-of-file"))
@@ -354,18 +308,15 @@
                       (define c3 (read-next))
                       (define c4 (read-next))
 
-                      (: hex-convert [-> Byte Byte])
                       (define (hex-convert c)
-                        (assert
-                         (cond
-                           [(<= (char->integer #\0) c (char->integer #\9))
-                            (- c (char->integer #\0))]
-                           [(<= (char->integer #\a) c (char->integer #\f))
-                            (- c (- (char->integer #\a) 10))]
-                           [(<= (char->integer #\A) c (char->integer #\F))
-                            (- c (- (char->integer #\A) 10))]
-                           [else (err "bad \\u escape ~e" (bytes c1 c2 c3 c4))])
-                         byte?))
+                        (cond
+                          [(<= (char->integer #\0) c (char->integer #\9))
+                           (- c (char->integer #\0))]
+                          [(<= (char->integer #\a) c (char->integer #\f))
+                           (- c (- (char->integer #\a) 10))]
+                          [(<= (char->integer #\A) c (char->integer #\F))
+                           (- c (- (char->integer #\A) 10))]
+                          [else (err "bad \\u escape ~e" (bytes c1 c2 c3 c4))]))
 
                       (+ (arithmetic-shift (hex-convert c1) 12)
                          (arithmetic-shift (hex-convert c2) 8)
@@ -390,7 +341,6 @@
                      (define e*
                        (cond
                          [(<= #xD800 e #xDFFF)
-                          (: err-missing [-> Nothing])
                           (define (err-missing)
                             (err "bad string \\u escape, missing second half of a UTF-16 pair"))
                           (unless (eqv? (read-byte i) (char->integer #\\)) (err-missing))
@@ -415,16 +365,8 @@
               (loop result 0 #f))))
 
         ;;
-        (: read-list  (All (A) [-> Symbol Char [-> A] (Listof  A)]))
-        (: read-mlist (All (A) [-> Symbol Char [-> A] (MListof A)]))
         (define-values (read-list read-mlist)
           (let ()
-            (: make (All (A) (case-> [-> [-> A (Listof A)  (Pairof  A (Listof A))]
-                                         [-> (Listof A)  (Listof A)]
-                                         [-> Symbol Char [-> A] (Listof A)]]
-                                     [-> [-> A (MListof A) (MPairof A(MListof A))]
-                                         [-> (MListof A) (MListof A)]
-                                         [-> Symbol Char [-> A] (MListof A)]])))
             (define ((make tcons treverse) what end read-one)
               (define ch (skip-whitespace))
               (cond
@@ -440,27 +382,14 @@
                       (read-byte i) ;; consume the eof
                       (err "error while parsing a json ~a" what)]))]))
 
-            (values (λ #:forall (A) (what end read-one)
-                      (((inst make A) (inst cons  A (Listof A))  (inst reverse A))
-                       what end read-one))
-                    (λ #:forall (A) (what end read-one)
-                      (((inst make A) (inst mcons A (MListof A)) (inst mreverse A))
-                       what end read-one)))))
+            (values (make  cons  reverse)
+                    (make mcons mreverse))))
 
         ;;
-        (: read-hash  [-> JSON-Hash])
-        (: read-mhash [-> JSON-MHash])
         (define-values (read-hash read-mhash)
           (let ()
-            (define-type JSON-Pair  (Pairof  Symbol Immutable-JSON))
-            (define-type JSON-MPair (MPairof Symbol Mutable-JSON))
-
-            (: read-pair  [-> JSON-Pair])
-            (: read-mpair [-> JSON-MPair])
             (define-values (read-pair read-mpair)
               (let ()
-                (: make (case-> [-> [-> Symbol Immutable-JSON JSON-Pair]  #:mutable? False [-> JSON-Pair]]
-                                [-> [-> Symbol Mutable-JSON   JSON-MPair] #:mutable? True  [-> JSON-MPair]]))
                 (define ((make tcons #:mutable? mutable?))
                   (define k (read-JSON #:mutable? mutable?))
                   (unless (string? k) (err "non-string value used for json object key"))
@@ -478,18 +407,16 @@
                 (values (make cons #:mutable? #f) (make mcons #:mutable? #t))))
 
             (values (λ ()
-                      (for/hasheq : JSON-Hash
+                      (for/hasheq
                           ([p (in-list (read-list 'object #\} read-pair))])
                         (values (car p) (cdr p))))
                     (λ ()
-                      (: result JSON-MHash)
                       (define result (make-hasheq))
                       (for ([p (in-mlist (read-mlist 'object #\} read-mpair))])
                         (hash-set! result (mcar p) (mcdr p)))
                       result))))
 
         ;;
-        (: read-literal [-> Bytes Void])
         (define (read-literal bstr)
           (define len (bytes-length bstr))
           (read-byte i)
@@ -511,10 +438,8 @@
               (bad-input bstr))))
 
         ;;
-        (: read-number [-> Char JSON-Number])
         (define (read-number ch)
           ;; match #rx#"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?"
-          (: start [-> JSON-Number])
           (define (start)
             (cond
               [(eqv? ch #\-)
@@ -524,7 +449,6 @@
                (read-integer 1)]))
 
           ;; need at least one digit:
-          (: read-integer [-> SGN JSON-Number])
           (define (read-integer sgn)
             (define c (read-byte i))
             (cond
@@ -536,7 +460,6 @@
                                #:eof? (eof-object? c))]))
 
           ;; more digits:
-          (: read-integer-rest [-> SGN Byte #:more-digits? Boolean JSON-Number])
           (define (read-integer-rest sgn n #:more-digits? more-digits?)
             (define c (peek-byte i))
             (to-json-number
@@ -550,11 +473,10 @@
                [(or (eqv? c (char->integer #\e))
                     (eqv? c (char->integer #\E)))
                 (read-byte i)
-                (read-exponent (* sgn n) (assert (bytes c) expt-mark?) 0)]
+                (read-exponent (* sgn n) (bytes c) 0)]
                [else (* sgn n)])))
 
           ;; need at least one digit:
-          (: read-fraction [-> SGN Byte JSON-Number])
           (define (read-fraction sgn n)
             (define c (read-byte i))
             (cond
@@ -565,7 +487,6 @@
                                #:eof? (eof-object? c))]))
 
           ;; more digits:
-          (: read-fraction-rest [-> SGN Natural Integer JSON-Number])
           (define (read-fraction-rest sgn n exp)
             (define c (peek-byte i))
             (to-json-number
@@ -576,11 +497,10 @@
                [(or (eqv? c (char->integer #\e))
                     (eqv? c (char->integer #\E)))
                 (read-byte i)
-                (read-exponent (* sgn n) (assert (bytes c) expt-mark?) exp)]
+                (read-exponent (* sgn n) (bytes c) exp)]
                [else (exact->inexact (* sgn n (expt 10 exp)))])))
 
           ;; need at least one digit, maybe after +/-:
-          (: read-exponent [-> Integer Expt-Mark Integer JSON-Number])
           (define (read-exponent n mark exp)
             (define c (read-byte i))
             (cond
@@ -596,7 +516,6 @@
                                #:eof? (eof-object? c))]))
 
           ;; need at least one digit, still:
-          (: read-exponent-more [-> Integer Expt-Mark SGN-Mark Integer SGN JSON-Number])
           (define (read-exponent-more n mark mark2 exp sgn)
             (define c (read-byte i))
             (cond
@@ -609,7 +528,6 @@
                                #:eof? (eof-object? c))]))
 
           ;; more digits:
-          (: read-exponent-rest [-> Integer Integer Integer SGN JSON-Number])
           (define (read-exponent-rest n exp exp2 sgn)
             (define c (peek-byte i))
             (cond
@@ -621,10 +539,6 @@
           (start))
 
         ;;
-        (: read-JSON (case-> [->* (#:mutable? False) (False) Immutable-JSON]
-                             [->* (#:mutable? True)  (False) Mutable-JSON]
-                             [->* (#:mutable? False) (True) (U EOF Immutable-JSON)]
-                             [->* (#:mutable? True)  (True) (U EOF Mutable-JSON)]))
         (define (read-JSON #:mutable? mutable? [top? #f])
           (define ch (skip-whitespace))
           (cond
@@ -663,7 +577,6 @@
                [else (bad-input)])]))
 
         ;;
-        (: bad-input [->* () (Bytes #:eof? Boolean) Nothing])
         (define (bad-input [prefix #""] #:eof? [eof? #f])
           (define bstr (make-bytes (sub1 (error-print-width))))
           (define bytes-read (peek-bytes-avail!* bstr 0 #f i))
