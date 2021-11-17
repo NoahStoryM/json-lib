@@ -52,8 +52,8 @@
    ;;;; See https://github.com/racket/typed-racket/issues/1161
    ;; (not (jsexpr? '#hasheq(['() . 1])))
    ;; (not (jsexpr? (hash-copy '#hasheq(['() . 1]))))
-   (not (jsexpr? (/ 1.0 0.0)))
-   (not (jsexpr? (/ -1.0 0.0)))
+   (jsexpr? (/ 1.0 0.0))
+   (jsexpr? (/ -1.0 0.0))
    (not (jsexpr? (/ 0.0 0.0)))
    (jsexpr? +inf.0)
    (jsexpr? -inf.0)

@@ -26,9 +26,9 @@
                    [json-inf+ jsinf+]
                    [json-inf- jsinf-])
       (let loop ([x x])
-        (or (equal? x json-inf+) (eq? x (json-inf+))
-            (equal? x json-inf-) (eq? x (json-inf-))
-            (equal? x json-null) (eq? x (json-null))
+        (or (equal? x json-inf+) (eqv? x (json-inf+))
+            (equal? x json-inf-) (eqv? x (json-inf-))
+            (equal? x json-null) (eqv? x (json-null))
             (json-constant? x)
             (and (list?  x) (andmap  loop x))
             (and (hash? x) (for/and ([(k v) (in-hash x)])
@@ -85,9 +85,9 @@
                  [json-inf- jsinf-]
                  [jsexpr-mhash? jsmhash?])
     (cond
-      [(or (eq? x (json-inf+)) (equal? x json-inf+)) x]
-      [(or (eq? x (json-inf-)) (equal? x json-inf-)) x]
-      [(or (eq? x (json-null)) (equal? x json-null)) x]
+      [(or (eqv? x (json-inf+)) (equal? x json-inf+)) x]
+      [(or (eqv? x (json-inf-)) (equal? x json-inf-)) x]
+      [(or (eqv? x (json-null)) (equal? x json-null)) x]
       [(json-constant? x) x]
       [(list? x) (map jsexpr-copy x)]
       [(hash? x)
