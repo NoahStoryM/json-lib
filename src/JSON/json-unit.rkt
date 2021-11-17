@@ -134,9 +134,9 @@
       (: jsexpr->immutable-json [-> JSExpr Immutable-JSON])
       (define (jsexpr->immutable-json x)
         (cond
-          [(or (eq? x (json-inf+)) (equal? x json-inf+)) JSON-inf+]
-          [(or (eq? x (json-inf-)) (equal? x json-inf-)) JSON-inf-]
-          [(or (eq? x (json-null)) (equal? x json-null)) JSON-null]
+          [(or (eqv? x (json-inf+)) (equal? x json-inf+)) JSON-inf+]
+          [(or (eqv? x (json-inf-)) (equal? x json-inf-)) JSON-inf-]
+          [(or (eqv? x (json-null)) (equal? x json-null)) JSON-null]
           [(json-constant? x) x]
           [(list? x)  (map jsexpr->immutable-json x)]
           [(hash? x)
@@ -148,9 +148,9 @@
       (: jsexpr->mutable-json   [-> JSExpr Mutable-JSON])
       (define (jsexpr->mutable-json x)
         (cond
-          [(or (eq? x (json-inf+)) (equal? x json-inf+)) JSON-inf+]
-          [(or (eq? x (json-inf-)) (equal? x json-inf-)) JSON-inf-]
-          [(or (eq? x (json-null)) (equal? x json-null)) JSON-null]
+          [(or (eqv? x (json-inf+)) (equal? x json-inf+)) JSON-inf+]
+          [(or (eqv? x (json-inf-)) (equal? x json-inf-)) JSON-inf-]
+          [(or (eqv? x (json-null)) (equal? x json-null)) JSON-null]
           [(json-constant? x) x]
           [(list? x)  (map->mlist jsexpr->mutable-json x)]
           [(hash? x)

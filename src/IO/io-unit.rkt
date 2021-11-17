@@ -208,8 +208,8 @@
         (parameterize ([json-inf+ jsinf+]
                        [json-inf- jsinf-])
           (cond
-            [(or (eq? n +inf.0) (eq? n (json-inf+))) JSON-inf+]
-            [(or (eq? n -inf.0) (eq? n (json-inf-))) JSON-inf-]
+            [(or (eqv? n +inf.0) (eqv? n (json-inf+))) JSON-inf+]
+            [(or (eqv? n -inf.0) (eqv? n (json-inf-))) JSON-inf-]
             [(json-number? n) n]
             [(inexact-real-nan? n) (raise-type-error 'to-json-number "json-number?" n)])))
 
