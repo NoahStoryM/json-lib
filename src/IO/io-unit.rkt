@@ -147,7 +147,7 @@
              (define (write-hash-kv layer)
                (λ (k v)
                  (if first? (set! first? #f) (write-bytes #"," o))
-                 (format/write-newline layer)
+                 (format/write-newline)
                  (format/write-indent layer)
                  ;; use a string encoding so we get the same deal with
                  ;; `rx-to-encode'
@@ -156,7 +156,7 @@
                  (format/write-whitespace)
                  (loop v layer)))
 
-             (format/write-newline layer)
+             (format/write-newline)
              (format/write-indent layer)
              (write-bytes #"{" o)
              (if (json-hash? js)
@@ -170,7 +170,7 @@
                                      [-> Symbol Mutable-JSON   (U Void Index)])
                                 ;; order output
                                 #t))
-             (format/write-newline layer)
+             (format/write-newline)
              (format/write-indent layer)
              (write-bytes #"}" o)]))
 
