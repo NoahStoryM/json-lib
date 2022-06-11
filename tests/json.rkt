@@ -131,26 +131,27 @@
                  "\b" "\n" "\r" "\f" "\t"         ; same escapes in both
                  "\a" "\v" "\e"                   ; does not use racket escapes
                  )])
-    (define (N x null) (if (procedure? x) (x null) x))
+    (define (N0 x null) (if (procedure? x) (x null) x))
+    (define (N1 x null) (N0 (if (integer? x) (inexact->exact x) x) null))
     (test
      ;; test jsexpr
      ;; default
-     (string->jsexpr (jsexpr->string (N x 'null)))
-     => (N x 'null)
+     (string->jsexpr (jsexpr->string (N0 x 'null)))
+     => (N1 x 'null)
      ;; different null
-     (string->jsexpr (jsexpr->string (N x #\null) #:null #\null) #:null #\null)
-     => (N x #\null)
+     (string->jsexpr (jsexpr->string (N0 x #\null) #:null #\null) #:null #\null)
+     => (N1 x #\null)
      ;; encode all non-ascii
-     (string->jsexpr (jsexpr->string (N x 'null) #:encode 'all))
-     => (N x 'null)
+     (string->jsexpr (jsexpr->string (N0 x 'null) #:encode 'all))
+     => (N1 x 'null)
 
      ;; test json
      ;; default
-     (string->json #:mutable? #f (json->string (N x JSON-null)))
-     => (N x JSON-null)
+     (string->json #:mutable? #f (json->string (N0 x JSON-null)))
+     => (N1 x JSON-null)
      ;; encode all non-ascii
-     (string->json #:mutable? #f (json->string (N x JSON-null) #:encode 'all))
-     => (N x JSON-null)))
+     (string->json #:mutable? #f (json->string (N0 x JSON-null) #:encode 'all))
+     => (N1 x JSON-null)))
 
   ;; also test some specific expected encodings
   (test
