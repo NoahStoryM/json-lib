@@ -98,14 +98,6 @@
             (for ([i (in-range 0 layer)])
               (write-string indent o))))
 
-        (: format/write-indentln [-> Natural Void])
-        (define (format/write-indentln layer)
-          (when format? (format/write-indent layer) (newline o)))
-
-        (: format/write-lnindent [-> Natural Void])
-        (define (format/write-lnindent layer)
-          (when format? (newline o) (format/write-indent layer)))
-
 
         (let loop : (U Void Index) ([js js] [layer : Natural 0])
           (cond
@@ -155,7 +147,8 @@
              (define (write-hash-kv layer)
                (lambda (k v)
                  (if first? (set! first? #f) (write-bytes #"," o))
-                 (format/write-lnindent layer)
+                 (format/write-newline layer)
+                 (format/write-indent layer)
                  ;; use a string encoding so we get the same deal with
                  ;; `rx-to-encode'
                  (write-JSON-string (symbol->string k))
@@ -163,7 +156,8 @@
                  (format/write-whitespace)
                  (loop v layer)))
 
-             (format/write-lnindent layer)
+             (format/write-newline layer)
+             (format/write-indent layer)
              (write-bytes #"{" o)
              (if (json-hash? js)
                  (hash-for-each js
@@ -176,7 +170,8 @@
                                      [-> Symbol Mutable-JSON   (U Void Index)])
                                 ;; order output
                                 #t))
-             (format/write-lnindent layer)
+             (format/write-newline layer)
+             (format/write-indent layer)
              (write-bytes #"}" o)]))
 
         (void))))
