@@ -145,7 +145,7 @@
 
              (: write-hash-kv [-> Natural [-> Symbol JSON (U Void Index)]])
              (define (write-hash-kv layer)
-               (lambda (k v)
+               (λ (k v)
                  (if first? (set! first? #f) (write-bytes #"," o))
                  (format/write-newline layer)
                  (format/write-indent layer)
