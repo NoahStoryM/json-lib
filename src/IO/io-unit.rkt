@@ -1,6 +1,7 @@
 #lang typed/racket/base
 
 (require typed/racket/unit
+         racket/list
          "../types.rkt"
          "../typed-help.rkt"
          "../Custom/custom-sig.rkt"
@@ -33,9 +34,9 @@
       (define undefined (gensym 'undefined))
 
       (λ (who js o
-          #:encode  [enc 'control]
-          #:format? [format? #f]
-          #:indent  [indent  "\t"])
+               #:encode  [enc 'control]
+               #:format? [format? #f]
+               #:indent  [indent  "\t"])
         (: escape [-> String String * String])
         (define (escape m . ms)
           (define ch (string-ref m 0))
@@ -129,48 +130,66 @@
              (cond [(pair? js)
                     (cond
                       [(<= (length js) 10)
-                       (loop (car js) layer)
-                       (for ([js (in-list (cdr js))])
-                         (write-bytes #"," o)
-                         (unless (hash? js)
-                           (format/write-whitespace))
-                         (loop js layer))]
-                      [else
                        (let ([layer (add1 layer)])
                          (let ([js (car js)])
-                           (unless (hash? js)
+                           (when (hash? js)
                              (format/write-newline)
                              (format/write-indent layer))
                            (loop js layer))
                          (for ([js (in-list (cdr js))])
                            (write-bytes #"," o)
-                           (unless (hash? js)
-                             (format/write-newline)
-                             (format/write-indent layer))
+                           (if (hash? js)
+                               (begin
+                                 (format/write-newline)
+                                 (format/write-indent layer))
+                               (format/write-whitespace))
+                           (loop js layer)))
+                       (when (hash? (car (last-pair js)))
+                         (format/write-newline)
+                         (format/write-indent layer))]
+                      [else
+                       (let ([layer (add1 layer)])
+                         (let ([js (car js)])
+                           (format/write-newline)
+                           (format/write-indent layer)
+                           (loop js layer))
+                         (for ([js (in-list (cdr js))])
+                           (write-bytes #"," o)
+                           (format/write-newline)
+                           (format/write-indent layer)
                            (loop js layer)))
                        (format/write-newline)
                        (format/write-indent layer)])]
                    [(mpair? js)
                     (cond
                       [(<= (mlength js) 10)
-                       (loop (mcar js) layer)
-                       (for ([js (in-mlist (mcdr js))])
-                         (write-bytes #"," o)
-                         (unless (hash? js)
-                           (format/write-whitespace))
-                         (loop js layer))]
-                      [else
                        (let ([layer (add1 layer)])
                          (let ([js (mcar js)])
-                           (unless (hash? js)
+                           (when (hash? js)
                              (format/write-newline)
                              (format/write-indent layer))
                            (loop js layer))
                          (for ([js (in-mlist (mcdr js))])
                            (write-bytes #"," o)
-                           (unless (hash? js)
-                             (format/write-newline)
-                             (format/write-indent layer))
+                           (if (hash? js)
+                               (begin
+                                 (format/write-newline)
+                                 (format/write-indent layer))
+                               (format/write-whitespace))
+                           (loop js layer)))
+                       #;(when (hash? (mcar (last-mpair js)))
+                           (format/write-newline)
+                           (format/write-indent layer))]
+                      [else
+                       (let ([layer (add1 layer)])
+                         (let ([js (mcar js)])
+                           (format/write-newline)
+                           (format/write-indent layer)
+                           (loop js layer))
+                         (for ([js (in-mlist (mcdr js))])
+                           (write-bytes #"," o)
+                           (format/write-newline)
+                           (format/write-indent layer)
                            (loop js layer)))
                        (format/write-newline)
                        (format/write-indent layer)])])
@@ -189,24 +208,26 @@
                  ;; `rx-to-encode'
                  (write-JSON-string (symbol->string k))
                  (write-bytes #":" o)
-                 (unless (hash? v)
-                   (format/write-whitespace))
+                 (if (hash? v)
+                     (begin
+                       (format/write-newline)
+                       (format/write-indent layer))
+                     (format/write-whitespace))
                  (loop v layer)))
 
-             (when (> layer 0) (format/write-newline))
-             (format/write-indent layer)
              (write-bytes #"{" o)
-             (if (json-hash? js)
-                 (hash-for-each js
-                                (ann (write-hash-kv (add1 layer))
-                                     [-> Symbol Immutable-JSON (U Void Index)])
-                                ;; order output
-                                #t)
-                 (hash-for-each js
-                                (ann (write-hash-kv (add1 layer))
-                                     [-> Symbol Mutable-JSON   (U Void Index)])
-                                ;; order output
-                                #t))
+             (let ([layer (add1 layer)])
+               (if (json-hash? js)
+                   (hash-for-each js
+                                  (ann (write-hash-kv layer)
+                                       [-> Symbol Immutable-JSON (U Void Index)])
+                                  ;; order output
+                                  #t)
+                   (hash-for-each js
+                                  (ann (write-hash-kv layer)
+                                       [-> Symbol Mutable-JSON   (U Void Index)])
+                                  ;; order output
+                                  #t)))
              (format/write-newline)
              (format/write-indent layer)
              (write-bytes #"}" o)]))
@@ -512,7 +533,7 @@
 
             (values (λ ()
                       (for/hasheq : JSON-Hash
-                          ([p (in-list (read-list 'object #\} read-pair))])
+                                  ([p (in-list (read-list 'object #\} read-pair))])
                         (values (car p) (cdr p))))
                     (λ ()
                       (: result JSON-MHash)
