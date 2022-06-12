@@ -121,8 +121,7 @@
                [(JSON-null? js) (write-bytes #"null"  o)]
                [(eq? js #f)     (write-bytes #"false" o)]
                [(eq? js #t)     (write-bytes #"true"  o)]
-               [(integer? js) (write (inexact->exact js) o)]
-               [(inexact-rational? js) (write js o)]
+               [(or (exact-integer? js) (inexact-rational? js)) (write js o)]
                [(string? js) (write-JSON-string js)]
                [else (raise-type-error who "legal JSON value" js)])]
             [(or (list? js) (mpair? js))
