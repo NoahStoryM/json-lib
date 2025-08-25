@@ -596,7 +596,7 @@
              (cond
                [(and more-digits? (digit-byte? c))
                 (read-byte i)
-                (read-integer-rest sgn (+ (* n 10) (to-number c)) #:more-digits? #t)]
+                (read-integer-rest sgn (assert (+ (* n 10) (to-number c)) byte?) #:more-digits? #t)]
                [(eqv? c (char->integer #\.))
                 (read-byte i)
                 (read-fraction sgn n)]
