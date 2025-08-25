@@ -589,14 +589,14 @@
                                #:eof? (eof-object? c))]))
 
           ;; more digits:
-          (: read-integer-rest [-> SGN Byte #:more-digits? Boolean JSON-Number])
+          (: read-integer-rest [-> SGN Natural #:more-digits? Boolean JSON-Number])
           (define (read-integer-rest sgn n #:more-digits? more-digits?)
             (define c (peek-byte i))
             (to-json-number
              (cond
                [(and more-digits? (digit-byte? c))
                 (read-byte i)
-                (read-integer-rest sgn (assert (+ (* n 10) (to-number c)) byte?) #:more-digits? #t)]
+                (read-integer-rest sgn (+ (* n 10) (to-number c)) #:more-digits? #t)]
                [(eqv? c (char->integer #\.))
                 (read-byte i)
                 (read-fraction sgn n)]
@@ -607,7 +607,7 @@
                [else (* sgn n)])))
 
           ;; need at least one digit:
-          (: read-fraction [-> SGN Byte JSON-Number])
+          (: read-fraction [-> SGN Natural JSON-Number])
           (define (read-fraction sgn n)
             (define c (read-byte i))
             (cond
